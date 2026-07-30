@@ -1,3 +1,5 @@
+.DS_Store
+
 # c8ctl profile cache (not meant to be committed)
 .c8ctl/
 .c8run/
