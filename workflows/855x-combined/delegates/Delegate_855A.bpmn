@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="Definitions_2" targetNamespace="http://bpmn.io/schema/bpmn" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.8.0">
+  <bpmn:process id="Delegate_855A" name="Delegate 855A - Organization/Facility Enrollment" isExecutable="true">
+    <bpmn:startEvent id="Start_855A" name="Start 855A">
+      <bpmn:outgoing>Flow_855A_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:callActivity id="Call_855A_Intake" name="Execute Intake">
+      <bpmn:extensionElements>
+        <zeebe:calledElement processId="Shared_Intake" propagateAllChildVariables="false" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_855A_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_855A_2</bpmn:outgoing>
+    </bpmn:callActivity>
+    <bpmn:callActivity id="Call_855A_OIG" name="Execute OIG Screening">
+      <bpmn:extensionElements>
+        <zeebe:calledElement processId="Shared_OIG_Screening" propagateAllChildVariables="false" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_855A_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_855A_3</bpmn:outgoing>
+    </bpmn:callActivity>
+    <bpmn:userTask id="UserTask_855A_Review" name="Review Facility Application">
+      <bpmn:extensionElements>
+        <zeebe:userTask />
+        <zeebe:formDefinition formId="review-validation" />
+        <zeebe:assignmentDefinition candidateGroups="enrollment-reviewers" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_855A_3</bpmn:incoming>
+      <bpmn:outgoing>Flow_855A_4</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:scriptTask id="Script_855A_License" name="Verify Facility License">
+      <bpmn:extensionElements>
+        <zeebe:script expression="=if provider.entityType = &quot;Facility&quot; and provider.licenseNumber != null then true else false" resultVariable="validation.licenseValid" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_855A_4</bpmn:incoming>
+      <bpmn:outgoing>Flow_855A_5</bpmn:outgoing>
+    </bpmn:scriptTask>
+    <bpmn:scriptTask id="Script_855A_Fire" name="Check Fire Safety Compliance">
+      <bpmn:extensionElements>
+        <zeebe:script expression="=if provider.fireSafetyCertification != null then true else false" resultVariable="provider.fireSafetyCompliant" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_855A_5</bpmn:incoming>
+      <bpmn:outgoing>Flow_855A_6</bpmn:outgoing>
+    </bpmn:scriptTask>
+    <bpmn:callActivity id="Call_855A_SA" name="Execute SA Referral">
+      <bpmn:extensionElements>
+        <zeebe:calledElement processId="Shared_SA_Referral" propagateAllChildVariables="false" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_855A_6</bpmn:incoming>
+      <bpmn:outgoing>Flow_855A_7</bpmn:outgoing>
+    </bpmn:callActivity>
+    <bpmn:userTask id="UserTask_855A_SiteVisit" name="Complete Site Visit Report">
+      <bpmn:extensionElements>
+        <zeebe:userTask />
+        <zeebe:formDefinition formId="site-visit-report" />
+        <zeebe:assignmentDefinition candidateGroups="site-visitors" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_855A_7</bpmn:incoming>
+      <bpmn:outgoing>Flow_855A_8</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:scriptTask id="Script_855A_SiteResults" name="Process Site Visit Results">
+      <bpmn:extensionElements>
+        <zeebe:script expression="=if siteVisitOutcome = &quot;Passed&quot; then true else false" resultVariable="provider.siteVerified" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_855A_8</bpmn:incoming>
+      <bpmn:outgoing>Flow_855A_9</bpmn:outgoing>
+    </bpmn:scriptTask>
+    <bpmn:endEvent id="End_855A" name="End 855A">
+      <bpmn:incoming>Flow_855A_9</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_855A_1" sourceRef="Start_855A" targetRef="Call_855A_Intake" />
+    <bpmn:sequenceFlow id="Flow_855A_2" sourceRef="Call_855A_Intake" targetRef="Call_855A_OIG" />
+    <bpmn:sequenceFlow id="Flow_855A_3" sourceRef="Call_855A_OIG" targetRef="UserTask_855A_Review" />
+    <bpmn:sequenceFlow id="Flow_855A_4" sourceRef="UserTask_855A_Review" targetRef="Script_855A_License" />
+    <bpmn:sequenceFlow id="Flow_855A_5" sourceRef="Script_855A_License" targetRef="Script_855A_Fire" />
+    <bpmn:sequenceFlow id="Flow_855A_6" sourceRef="Script_855A_Fire" targetRef="Call_855A_SA" />
+    <bpmn:sequenceFlow id="Flow_855A_7" sourceRef="Call_855A_SA" targetRef="UserTask_855A_SiteVisit" />
+    <bpmn:sequenceFlow id="Flow_855A_8" sourceRef="UserTask_855A_SiteVisit" targetRef="Script_855A_SiteResults" />
+    <bpmn:sequenceFlow id="Flow_855A_9" sourceRef="Script_855A_SiteResults" targetRef="End_855A" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_2">
+    <bpmndi:BPMNPlane id="BPMNPlane_2" bpmnElement="Delegate_855A">
+      <bpmndi:BPMNShape id="Shape_855A_Start" bpmnElement="Start_855A">
+        <dc:Bounds x="152" y="202" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_855A_Call_Intake" bpmnElement="Call_855A_Intake">
+        <dc:Bounds x="240" y="180" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_855A_Call_OIG" bpmnElement="Call_855A_OIG">
+        <dc:Bounds x="440" y="180" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_855A_UserTask_Review" bpmnElement="UserTask_855A_Review">
+        <dc:Bounds x="640" y="180" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_855A_Script_License" bpmnElement="Script_855A_License">
+        <dc:Bounds x="840" y="180" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_855A_Script_Fire" bpmnElement="Script_855A_Fire">
+        <dc:Bounds x="1040" y="180" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_855A_Call_SA" bpmnElement="Call_855A_SA">
+        <dc:Bounds x="1240" y="180" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_855A_UserTask_SiteVisit" bpmnElement="UserTask_855A_SiteVisit">
+        <dc:Bounds x="1440" y="180" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_855A_Script_SiteResults" bpmnElement="Script_855A_SiteResults">
+        <dc:Bounds x="1640" y="180" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_855A_End" bpmnElement="End_855A">
+        <dc:Bounds x="1840" y="202" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Edge_855A_1" bpmnElement="Flow_855A_1">
+        <di:waypoint x="188" y="220" />
+        <di:waypoint x="240" y="220" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_855A_2" bpmnElement="Flow_855A_2">
+        <di:waypoint x="340" y="220" />
+        <di:waypoint x="440" y="220" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_855A_3" bpmnElement="Flow_855A_3">
+        <di:waypoint x="540" y="220" />
+        <di:waypoint x="640" y="220" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_855A_4" bpmnElement="Flow_855A_4">
+        <di:waypoint x="740" y="220" />
+        <di:waypoint x="840" y="220" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_855A_5" bpmnElement="Flow_855A_5">
+        <di:waypoint x="940" y="220" />
+        <di:waypoint x="1040" y="220" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_855A_6" bpmnElement="Flow_855A_6">
+        <di:waypoint x="1140" y="220" />
+        <di:waypoint x="1240" y="220" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_855A_7" bpmnElement="Flow_855A_7">
+        <di:waypoint x="1340" y="220" />
+        <di:waypoint x="1440" y="220" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_855A_8" bpmnElement="Flow_855A_8">
+        <di:waypoint x="1540" y="220" />
+        <di:waypoint x="1640" y="220" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_855A_9" bpmnElement="Flow_855A_9">
+        <di:waypoint x="1740" y="220" />
+        <di:waypoint x="1840" y="220" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

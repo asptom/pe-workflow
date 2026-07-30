@@ -1,0 +1,301 @@
+{
+  "executionPlatform": "Camunda Cloud",
+  "executionPlatformVersion": "8.9.0",
+  "exporter": {
+    "name": "Camunda Web Modeler",
+    "version": "c72e043"
+  },
+  "schemaVersion": 19,
+  "id": "cms855i-start-form",
+  "components": [
+    {
+      "type": "text",
+      "id": "Text_Header",
+      "text": "# CMS-855I MAC Enrollment - Application Intake",
+      "layout": { "row": "row_0", "columns": null }
+    },
+    {
+      "type": "textfield",
+      "id": "Field_macTrackingNumber",
+      "key": "macTrackingNumber",
+      "label": "MAC Tracking Number",
+      "defaultValue": "MAC-2026-855I-04821",
+      "layout": { "row": "row_1", "columns": null }
+    },
+    {
+      "type": "textfield",
+      "id": "Field_submissionMethod",
+      "key": "submissionMethod",
+      "label": "Submission Method",
+      "defaultValue": "PECOS",
+      "layout": { "row": "row_2", "columns": null }
+    },
+    {
+      "type": "datetime",
+      "id": "Field_filingDate",
+      "key": "filingDate",
+      "label": "Filing Date",
+      "defaultValue": "2026-07-15",
+      "subtype": "date",
+      "layout": { "row": "row_3", "columns": null }
+    },
+    {
+      "type": "textfield",
+      "id": "Field_macName",
+      "key": "macName",
+      "label": "MAC Name",
+      "defaultValue": "Noridian Healthcare Solutions",
+      "layout": { "row": "row_4", "columns": null }
+    },
+    {
+      "type": "textfield",
+      "id": "Field_macJurisdiction",
+      "key": "macJurisdiction",
+      "label": "MAC Jurisdiction",
+      "defaultValue": "JI — IL, MN, WI",
+      "layout": { "row": "row_5", "columns": null }
+    },
+    {
+      "type": "separator",
+      "id": "Separator_01",
+      "layout": { "row": "row_6", "columns": null }
+    },
+    {
+      "type": "text",
+      "id": "Text_ApplicantInfo",
+      "text": "## Applicant Information",
+      "layout": { "row": "row_7", "columns": null }
+    },
+    {
+      "type": "textfield",
+      "id": "Field_legalName",
+      "key": "applicant.legalName",
+      "label": "Legal Name",
+      "defaultValue": "Jane Doe, MD",
+      "layout": { "row": "row_8", "columns": null }
+    },
+    {
+      "type": "textfield",
+      "id": "Field_npi",
+      "key": "applicant.npi",
+      "label": "NPI",
+      "defaultValue": "1234567890",
+      "layout": { "row": "row_9", "columns": null }
+    },
+    {
+      "type": "textfield",
+      "id": "Field_tin",
+      "key": "applicant.tin",
+      "label": "TIN",
+      "defaultValue": "12-3456789",
+      "layout": { "row": "row_10", "columns": null }
+    },
+    {
+      "type": "textfield",
+      "id": "Field_entityType",
+      "key": "applicant.entityType",
+      "label": "Entity Type",
+      "defaultValue": "Professional Corporation (PC)",
+      "layout": { "row": "row_11", "columns": null }
+    },
+    {
+      "type": "textfield",
+      "id": "Field_legalBusinessName",
+      "key": "applicant.legalBusinessName",
+      "label": "Legal Business Name",
+      "defaultValue": "Jane Doe, MD, PC",
+      "layout": { "row": "row_12", "columns": null }
+    },
+    {
+      "type": "separator",
+      "id": "Separator_02",
+      "layout": { "row": "row_13", "columns": null }
+    },
+    {
+      "type": "text",
+      "id": "Text_Validation",
+      "text": "## Validation Results",
+      "layout": { "row": "row_14", "columns": null }
+    },
+    {
+      "type": "checkbox",
+      "id": "Field_npiIsActive",
+      "key": "validation.npiIsActive",
+      "label": "NPI is Active",
+      "defaultValue": true,
+      "layout": { "row": "row_15", "columns": null }
+    },
+    {
+      "type": "checkbox",
+      "id": "Field_npiMatchesTIN",
+      "key": "validation.npiMatchesTIN",
+      "label": "NPI Matches TIN",
+      "defaultValue": true,
+      "layout": { "row": "row_16", "columns": null }
+    },
+    {
+      "type": "checkbox",
+      "id": "Field_licenseValid",
+      "key": "validation.licenseValid",
+      "label": "License Valid",
+      "defaultValue": true,
+      "layout": { "row": "row_17", "columns": null }
+    },
+    {
+      "type": "separator",
+      "id": "Separator_03",
+      "layout": { "row": "row_18", "columns": null }
+    },
+    {
+      "type": "text",
+      "id": "Text_Verification",
+      "text": "## Verification Results",
+      "layout": { "row": "row_19", "columns": null }
+    },
+    {
+      "type": "checkbox",
+      "id": "Field_oigCleared",
+      "key": "verification.oigCleared",
+      "label": "OIG Cleared",
+      "defaultValue": true,
+      "layout": { "row": "row_20", "columns": null }
+    },
+    {
+      "type": "checkbox",
+      "id": "Field_samCleared",
+      "key": "verification.samCleared",
+      "label": "SAM Cleared",
+      "defaultValue": true,
+      "layout": { "row": "row_21", "columns": null }
+    },
+    {
+      "type": "textfield",
+      "id": "Field_fingerprintStatus",
+      "key": "verification.fingerprintStatus",
+      "label": "Fingerprint Status",
+      "defaultValue": "APPROVED",
+      "layout": { "row": "row_22", "columns": null }
+    },
+    {
+      "type": "separator",
+      "id": "Separator_04",
+      "layout": { "row": "row_23", "columns": null }
+    },
+    {
+      "type": "text",
+      "id": "Text_ProcessFlow",
+      "text": "## Process Flow Decisions",
+      "layout": { "row": "row_24", "columns": null }
+    },
+    {
+      "type": "checkbox",
+      "id": "Field_applicationComplete",
+      "key": "applicationComplete",
+      "label": "Application Complete",
+      "defaultValue": true,
+      "layout": { "row": "row_25", "columns": null }
+    },
+    {
+      "type": "checkbox",
+      "id": "Field_providerResponded",
+      "key": "providerResponded",
+      "label": "Provider Responded",
+      "defaultValue": true,
+      "layout": { "row": "row_26", "columns": null }
+    },
+    {
+      "type": "checkbox",
+      "id": "Field_saAoResponseReceived",
+      "key": "saAoResponseReceived",
+      "label": "SA/AO Response Received",
+      "defaultValue": true,
+      "layout": { "row": "row_27", "columns": null }
+    },
+    {
+      "type": "textfield",
+      "id": "Field_saAoRecommendation",
+      "key": "saAoRecommendation",
+      "label": "SA/AO Recommendation",
+      "defaultValue": "Favorable",
+      "layout": { "row": "row_28", "columns": null }
+    },
+    {
+      "type": "checkbox",
+      "id": "Field_saAoSiteVisitRequired",
+      "key": "saAoSiteVisitRequired",
+      "label": "SA/AO Site Visit Required",
+      "defaultValue": false,
+      "layout": { "row": "row_29", "columns": null }
+    },
+    {
+      "type": "checkbox",
+      "id": "Field_siteVisitRequired",
+      "key": "siteVisitRequired",
+      "label": "Site Visit Required",
+      "defaultValue": false,
+      "layout": { "row": "row_30", "columns": null }
+    },
+    {
+      "type": "separator",
+      "id": "Separator_05",
+      "layout": { "row": "row_31", "columns": null }
+    },
+    {
+      "type": "text",
+      "id": "Text_ReferralDecision",
+      "text": "## Referral & Decision",
+      "layout": { "row": "row_32", "columns": null }
+    },
+    {
+      "type": "textfield",
+      "id": "Field_referralEntity",
+      "key": "referralEntity",
+      "label": "Referral Entity",
+      "defaultValue": "State Agency (IL Dept of Public Health)",
+      "layout": { "row": "row_33", "columns": null }
+    },
+    {
+      "type": "datetime",
+      "id": "Field_referralDate",
+      "key": "referralDate",
+      "label": "Referral Date",
+      "defaultValue": "2026-07-20",
+      "subtype": "date",
+      "layout": { "row": "row_34", "columns": null }
+    },
+    {
+      "type": "textfield",
+      "id": "Field_cmsDecision",
+      "key": "cmsDecision",
+      "label": "CMS Decision",
+      "defaultValue": "Approved",
+      "layout": { "row": "row_35", "columns": null }
+    },
+    {
+      "type": "textfield",
+      "id": "Field_cmsCertificationNumber",
+      "key": "cmsCertificationNumber",
+      "label": "CMS Certification Number",
+      "defaultValue": "CCN-1234567890",
+      "layout": { "row": "row_36", "columns": null }
+    },
+    {
+      "type": "textfield",
+      "id": "Field_ptanNumber",
+      "key": "ptanNumber",
+      "label": "PTAN Number",
+      "defaultValue": "PTAN-98765",
+      "layout": { "row": "row_37", "columns": null }
+    },
+    {
+      "type": "datetime",
+      "id": "Field_effectiveDate",
+      "key": "effectiveDate",
+      "label": "Effective Date",
+      "defaultValue": "2026-09-01",
+      "subtype": "date",
+      "layout": { "row": "row_38", "columns": null }
+    }
+  ],
+  "type": "default"
+}

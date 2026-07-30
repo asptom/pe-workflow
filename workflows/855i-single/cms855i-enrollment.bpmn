@@ -1,0 +1,636 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="Definitions_CMS855I_MAC" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Web Modeler" exporterVersion="c72e043" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.9.0">
+  <bpmn:process id="cms855i-mac-enrollment" name="CMS-855I MAC Enrollment Processing" isExecutable="true">
+    <bpmn:startEvent id="Start_ReceiveApp" name="Application received">
+      <bpmn:extensionElements>
+        <zeebe:formDefinition formId="cms855i-start-form" />
+      </bpmn:extensionElements>
+      <bpmn:outgoing>Flow_ReceiveApp_Intake</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:scriptTask id="Task_Intake" name="Intake — log application and assign tracking number">
+      <bpmn:extensionElements>
+        <zeebe:script expression="=&#34;Application logged. MAC Tracking: &#34; + macTrackingNumber + &#34;. Submission method: &#34; + submissionMethod + &#34;. Filing date: &#34; + filingDate" resultVariable="intakeRecord" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_ReceiveApp_Intake</bpmn:incoming>
+      <bpmn:outgoing>Flow_058lvwi</bpmn:outgoing>
+    </bpmn:scriptTask>
+    <bpmn:scriptTask id="Task_Validate" name="Validate NPI, TIN, license and enrollment data">
+      <bpmn:extensionElements>
+        <zeebe:script expression="=&#34;Validation complete. NPI active: &#34; + string(npiIsActive) + &#34;. TIN matches: &#34; + string(npiMatchesTIN) + &#34;. License valid: &#34; + string(licenseValid)" resultVariable="validationResult" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_058lvwi</bpmn:incoming>
+      <bpmn:outgoing>Flow_Validate_Completeness</bpmn:outgoing>
+    </bpmn:scriptTask>
+    <bpmn:scriptTask id="Task_Verify" name="OIG/SAM exclusion screening and verification">
+      <bpmn:extensionElements>
+        <zeebe:script expression="=&#34;OIG cleared: &#34; + string(oigCleared) + &#34;. SAM cleared: &#34; + string(samCleared) + &#34;. Fingerprint status: &#34; + fingerprintStatus" resultVariable="verificationResult" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_Validate_Completeness</bpmn:incoming>
+      <bpmn:outgoing>Flow_Verify_CompletenessCheck</bpmn:outgoing>
+    </bpmn:scriptTask>
+    <bpmn:businessRuleTask id="Task_CompletenessCheck" name="Determine application completeness and required documentation">
+      <bpmn:extensionElements>
+        <zeebe:calledDecision decisionId="required-documentation" resultVariable="completenessResult" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_Verify_CompletenessCheck</bpmn:incoming>
+      <bpmn:outgoing>Flow_Completeness_Gateway</bpmn:outgoing>
+    </bpmn:businessRuleTask>
+    <bpmn:exclusiveGateway id="Gateway_Completeness" name="Application complete?" default="Flow_Complete_No">
+      <bpmn:incoming>Flow_Completeness_Gateway</bpmn:incoming>
+      <bpmn:outgoing>Flow_Complete_Yes</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Complete_No</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:scriptTask id="Task_DevelopmentRequest" name="Send development request for missing information">
+      <bpmn:extensionElements>
+        <zeebe:script expression="=&#34;Development request sent to provider. Missing: &#34; + completenessResult.requiredDocuments + &#34;. Response deadline: 30 days.&#34;" resultVariable="developmentRequestStatus" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_Complete_No</bpmn:incoming>
+      <bpmn:outgoing>Flow_DevReq_Timer</bpmn:outgoing>
+    </bpmn:scriptTask>
+    <bpmn:intermediateCatchEvent id="Timer_ResponseWindow" name="30-day response window">
+      <bpmn:incoming>Flow_DevReq_Timer</bpmn:incoming>
+      <bpmn:outgoing>Flow_Timer_ResponseCheck</bpmn:outgoing>
+      <bpmn:timerEventDefinition id="TimerDef_Response">
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">P30D</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:exclusiveGateway id="Gateway_ResponseCheck" name="Provider responded?" default="Flow_Response_No">
+      <bpmn:incoming>Flow_Timer_ResponseCheck</bpmn:incoming>
+      <bpmn:outgoing>Flow_Response_Yes</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Response_No</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:scriptTask id="Task_ReturnApplication" name="Return application — no response received">
+      <bpmn:extensionElements>
+        <zeebe:script expression="=&#34;Application returned to provider. Reason: No response to development request within 30 days. MAC Tracking: &#34; + macTrackingNumber" resultVariable="returnStatus" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_Response_No</bpmn:incoming>
+      <bpmn:outgoing>Flow_Return_End</bpmn:outgoing>
+    </bpmn:scriptTask>
+    <bpmn:endEvent id="EndEvent_Returned" name="Application returned">
+      <bpmn:incoming>Flow_Return_End</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:scriptTask id="Task_ReviewResponse" name="Review supplemental documentation received">
+      <bpmn:extensionElements>
+        <zeebe:script expression="=&#34;Supplemental documentation received and reviewed. Application updated.&#34;" resultVariable="responseReviewStatus" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_Response_Yes</bpmn:incoming>
+      <bpmn:outgoing>Flow_03h45ca</bpmn:outgoing>
+    </bpmn:scriptTask>
+    <bpmn:exclusiveGateway id="Gateway_MergeSAReferral">
+      <bpmn:incoming>Flow_Complete_Yes</bpmn:incoming>
+      <bpmn:incoming>Flow_SiteVisit_SAReferral</bpmn:incoming>
+      <bpmn:incoming>Flow_03h45ca</bpmn:incoming>
+      <bpmn:outgoing>Flow_MergeSAReferral_Referral</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:scriptTask id="Task_SAReferral" name="Refer application to State Agency or Accrediting Organization">
+      <bpmn:extensionElements>
+        <zeebe:script expression="=&#34;Application referred to &#34; + referralEntity + &#34;. Referral date: &#34; + referralDate + &#34;. Estimated review: 45 days.&#34;" resultVariable="referralStatus" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_MergeSAReferral_Referral</bpmn:incoming>
+      <bpmn:outgoing>Flow_SAReferral_Timer</bpmn:outgoing>
+    </bpmn:scriptTask>
+    <bpmn:intermediateCatchEvent id="Timer_SAReview" name="SA/AO review period (45 days)">
+      <bpmn:incoming>Flow_SAReferral_Timer</bpmn:incoming>
+      <bpmn:outgoing>Flow_Timer_SAReviewCheck</bpmn:outgoing>
+      <bpmn:timerEventDefinition id="TimerDef_SAReview">
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">P45D</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:exclusiveGateway id="Gateway_SAReview" name="SA/AO response received?" default="Flow_SA_No">
+      <bpmn:incoming>Flow_Timer_SAReviewCheck</bpmn:incoming>
+      <bpmn:outgoing>Flow_SA_Yes</bpmn:outgoing>
+      <bpmn:outgoing>Flow_SA_No</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:scriptTask id="Task_FollowUpSA" name="Follow up with State Agency or Accrediting Organization">
+      <bpmn:extensionElements>
+        <zeebe:script expression="=&#34;Follow-up sent to &#34; + referralEntity + &#34;. Awaiting response.&#34;" resultVariable="followUpStatus" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_SA_No</bpmn:incoming>
+      <bpmn:outgoing>Flow_FollowUp_Timer</bpmn:outgoing>
+    </bpmn:scriptTask>
+    <bpmn:intermediateCatchEvent id="Timer_FollowUp" name="Additional wait (14 days)">
+      <bpmn:incoming>Flow_FollowUp_Timer</bpmn:incoming>
+      <bpmn:outgoing>Flow_FollowUp_SAReviewCheck</bpmn:outgoing>
+      <bpmn:timerEventDefinition id="TimerDef_FollowUp">
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">P14D</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:exclusiveGateway id="Gateway_FollowUpCheck" name="SA/AO responded after follow-up?" default="Flow_FollowUp_No">
+      <bpmn:incoming>Flow_FollowUp_SAReviewCheck</bpmn:incoming>
+      <bpmn:outgoing>Flow_FollowUp_Yes</bpmn:outgoing>
+      <bpmn:outgoing>Flow_FollowUp_No</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:scriptTask id="Task_EscalateToCMS" name="Escalate to CMS Provider Enrollment">
+      <bpmn:extensionElements>
+        <zeebe:script expression="=&#34;Escalated to CMS Provider Enrollment. SA/AO non-responsive after follow-up.&#34;" resultVariable="escalationStatus" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_FollowUp_No</bpmn:incoming>
+      <bpmn:outgoing>Flow_Escalate_Forward</bpmn:outgoing>
+    </bpmn:scriptTask>
+    <bpmn:exclusiveGateway id="Gateway_MergeSAResults">
+      <bpmn:incoming>Flow_SA_Yes</bpmn:incoming>
+      <bpmn:incoming>Flow_FollowUp_Yes</bpmn:incoming>
+      <bpmn:incoming>Flow_Escalate_Forward</bpmn:incoming>
+      <bpmn:outgoing>Flow_MergeSAResults_Log</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:scriptTask id="Task_LogSAResults" name="Receive and log SA/AO review results">
+      <bpmn:extensionElements>
+        <zeebe:script expression="=&#34;SA/AO review received. Recommendation: &#34; + saAoRecommendation + &#34;. Site visit required: &#34; + string(saAoSiteVisitRequired)" resultVariable="saResultsLogged" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_MergeSAResults_Log</bpmn:incoming>
+      <bpmn:outgoing>Flow_LogSA_SiteVisitDetermination</bpmn:outgoing>
+    </bpmn:scriptTask>
+    <bpmn:businessRuleTask id="Task_SiteVisitDetermination" name="Determine site visit requirement">
+      <bpmn:extensionElements>
+        <zeebe:calledDecision decisionId="site-visit-determination" resultVariable="siteVisitResult" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_LogSA_SiteVisitDetermination</bpmn:incoming>
+      <bpmn:outgoing>Flow_SiteVisitDec_Gateway</bpmn:outgoing>
+    </bpmn:businessRuleTask>
+    <bpmn:exclusiveGateway id="Gateway_SiteVisit" name="Site visit required?" default="Flow_SV_No">
+      <bpmn:incoming>Flow_SiteVisitDec_Gateway</bpmn:incoming>
+      <bpmn:outgoing>Flow_SV_Yes</bpmn:outgoing>
+      <bpmn:outgoing>Flow_SV_No</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:scriptTask id="Task_OrderSiteVisit" name="Order site visit through PECOS">
+      <bpmn:extensionElements>
+        <zeebe:script expression="=&#34;Site visit ordered via PECOS. Type: &#34; + siteVisitResult.siteVisitType + &#34;. Assigned to National Site Visit Contractor.&#34;" resultVariable="siteVisitOrderStatus" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_SV_Yes</bpmn:incoming>
+      <bpmn:outgoing>Flow_OrderSV_Timer</bpmn:outgoing>
+    </bpmn:scriptTask>
+    <bpmn:intermediateCatchEvent id="Timer_SiteVisit" name="Site visit completion period (45 days)">
+      <bpmn:incoming>Flow_OrderSV_Timer</bpmn:incoming>
+      <bpmn:outgoing>Flow_Timer_SVResults</bpmn:outgoing>
+      <bpmn:timerEventDefinition id="TimerDef_SiteVisit">
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">P45D</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:scriptTask id="Task_SiteVisitResults" name="Receive and review site visit results">
+      <bpmn:extensionElements>
+        <zeebe:script expression="=&#34;Site visit results received. Outcome: &#34; + siteVisitOutcome + &#34;. Provider site verified: &#34; + string(siteVerified)" resultVariable="siteVisitResultsStatus" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_Timer_SVResults</bpmn:incoming>
+      <bpmn:outgoing>Flow_SiteVisit_SAReferral</bpmn:outgoing>
+    </bpmn:scriptTask>
+    <bpmn:scriptTask id="Task_ForwardToCMS" name="Forward complete application to CMS Provider Enrollment">
+      <bpmn:extensionElements>
+        <zeebe:script expression="=&#34;Complete application packet forwarded to CMS Provider Enrollment. Includes: MAC recommendation, SA/AO results, site visit results (if applicable).&#34;" resultVariable="cmsForwardStatus" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_LogSA_SiteVisitDetermination</bpmn:incoming>
+      <bpmn:outgoing>Flow_Forward_CMSDecision</bpmn:outgoing>
+    </bpmn:scriptTask>
+    <bpmn:intermediateCatchEvent id="Timer_CMSDecision" name="CMS review period (30 days)">
+      <bpmn:incoming>Flow_Forward_CMSDecision</bpmn:incoming>
+      <bpmn:outgoing>Flow_Timer_CMSCheck</bpmn:outgoing>
+      <bpmn:timerEventDefinition id="TimerDef_CMSDecision">
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">P30D</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:exclusiveGateway id="Gateway_CMSDecision" name="CMS decision?" default="Flow_CMS_Denied">
+      <bpmn:incoming>Flow_Timer_CMSCheck</bpmn:incoming>
+      <bpmn:outgoing>Flow_CMS_Approved</bpmn:outgoing>
+      <bpmn:outgoing>Flow_CMS_Denied</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:scriptTask id="Task_SendApproval" name="Send enrollment approval letter to provider">
+      <bpmn:extensionElements>
+        <zeebe:script expression="=&#34;Approval letter sent. CCN: &#34; + cmsCertificationNumber + &#34;. PTAN: &#34; + ptanNumber + &#34;. Effective date: &#34; + effectiveDate + &#34;. Copies to SA/AO.&#34;" resultVariable="approvalLetterStatus" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_CMS_Approved</bpmn:incoming>
+      <bpmn:outgoing>Flow_Approval_End</bpmn:outgoing>
+    </bpmn:scriptTask>
+    <bpmn:endEvent id="EndEvent_Approved" name="Enrollment approved — letter sent">
+      <bpmn:incoming>Flow_Approval_End</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:scriptTask id="Task_SendDenial" name="Send enrollment denial letter to provider">
+      <bpmn:extensionElements>
+        <zeebe:script expression="=&#34;Denial letter sent. Reason: &#34; + denialReason + &#34;. Provider may appeal or resubmit corrected application.&#34;" resultVariable="denialLetterStatus" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_CMS_Denied</bpmn:incoming>
+      <bpmn:outgoing>Flow_Denial_End</bpmn:outgoing>
+    </bpmn:scriptTask>
+    <bpmn:endEvent id="EndEvent_Denied" name="Enrollment denied — letter sent">
+      <bpmn:incoming>Flow_Denial_End</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_ReceiveApp_Intake" sourceRef="Start_ReceiveApp" targetRef="Task_Intake" />
+    <bpmn:sequenceFlow id="Flow_Validate_Completeness" sourceRef="Task_Validate" targetRef="Task_Verify" />
+    <bpmn:sequenceFlow id="Flow_Verify_CompletenessCheck" sourceRef="Task_Verify" targetRef="Task_CompletenessCheck" />
+    <bpmn:sequenceFlow id="Flow_Completeness_Gateway" sourceRef="Task_CompletenessCheck" targetRef="Gateway_Completeness" />
+    <bpmn:sequenceFlow id="Flow_Complete_Yes" name="Complete" sourceRef="Gateway_Completeness" targetRef="Gateway_MergeSAReferral">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=applicationComplete = true</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Complete_No" name="Incomplete" sourceRef="Gateway_Completeness" targetRef="Task_DevelopmentRequest" />
+    <bpmn:sequenceFlow id="Flow_DevReq_Timer" sourceRef="Task_DevelopmentRequest" targetRef="Timer_ResponseWindow" />
+    <bpmn:sequenceFlow id="Flow_Timer_ResponseCheck" sourceRef="Timer_ResponseWindow" targetRef="Gateway_ResponseCheck" />
+    <bpmn:sequenceFlow id="Flow_Response_Yes" name="Responded" sourceRef="Gateway_ResponseCheck" targetRef="Task_ReviewResponse">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=providerResponded = true</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Response_No" name="No response" sourceRef="Gateway_ResponseCheck" targetRef="Task_ReturnApplication" />
+    <bpmn:sequenceFlow id="Flow_Return_End" sourceRef="Task_ReturnApplication" targetRef="EndEvent_Returned" />
+    <bpmn:sequenceFlow id="Flow_SAReferral_Timer" sourceRef="Task_SAReferral" targetRef="Timer_SAReview" />
+    <bpmn:sequenceFlow id="Flow_Timer_SAReviewCheck" sourceRef="Timer_SAReview" targetRef="Gateway_SAReview" />
+    <bpmn:sequenceFlow id="Flow_MergeSAReferral_Referral" sourceRef="Gateway_MergeSAReferral" targetRef="Task_SAReferral" />
+
+    <bpmn:sequenceFlow id="Flow_SA_Yes" name="Received" sourceRef="Gateway_SAReview" targetRef="Gateway_MergeSAResults">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=saAoResponseReceived = true</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_SA_No" name="No response" sourceRef="Gateway_SAReview" targetRef="Task_FollowUpSA" />
+    <bpmn:sequenceFlow id="Flow_FollowUp_Timer" sourceRef="Task_FollowUpSA" targetRef="Timer_FollowUp" />
+    <bpmn:sequenceFlow id="Flow_FollowUp_SAReviewCheck" sourceRef="Timer_FollowUp" targetRef="Gateway_FollowUpCheck" />
+    <bpmn:sequenceFlow id="Flow_FollowUp_Yes" name="Received" sourceRef="Gateway_FollowUpCheck" targetRef="Gateway_MergeSAResults">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=saAoResponseReceived = true</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_FollowUp_No" name="Still no response" sourceRef="Gateway_FollowUpCheck" targetRef="Task_EscalateToCMS" />
+    <bpmn:sequenceFlow id="Flow_Escalate_Forward" sourceRef="Task_EscalateToCMS" targetRef="Gateway_MergeSAResults" />
+    <bpmn:sequenceFlow id="Flow_MergeSAResults_Log" sourceRef="Gateway_MergeSAResults" targetRef="Task_LogSAResults" />
+    <bpmn:sequenceFlow id="Flow_LogSA_SiteVisitDetermination" sourceRef="Task_LogSAResults" targetRef="Task_SiteVisitDetermination" />
+    <bpmn:sequenceFlow id="Flow_SiteVisitDec_Gateway" sourceRef="Task_SiteVisitDetermination" targetRef="Gateway_SiteVisit" />
+    <bpmn:sequenceFlow id="Flow_SV_Yes" name="Yes" sourceRef="Gateway_SiteVisit" targetRef="Task_OrderSiteVisit">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=siteVisitResult.siteVisitRequired = true</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_SV_No" name="No" sourceRef="Gateway_SiteVisit" targetRef="Task_ForwardToCMS" />
+    <bpmn:sequenceFlow id="Flow_OrderSV_Timer" sourceRef="Task_OrderSiteVisit" targetRef="Timer_SiteVisit" />
+    <bpmn:sequenceFlow id="Flow_Timer_SVResults" sourceRef="Timer_SiteVisit" targetRef="Task_SiteVisitResults" />
+    <bpmn:sequenceFlow id="Flow_SiteVisit_SAReferral" sourceRef="Task_SiteVisitResults" targetRef="Gateway_MergeSAReferral" />
+    <bpmn:sequenceFlow id="Flow_Forward_CMSDecision" sourceRef="Task_ForwardToCMS" targetRef="Timer_CMSDecision" />
+    <bpmn:sequenceFlow id="Flow_Timer_CMSCheck" sourceRef="Timer_CMSDecision" targetRef="Gateway_CMSDecision" />
+    <bpmn:sequenceFlow id="Flow_CMS_Approved" name="Approved" sourceRef="Gateway_CMSDecision" targetRef="Task_SendApproval">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=cmsDecision = "Approved"</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_CMS_Denied" name="Denied" sourceRef="Gateway_CMSDecision" targetRef="Task_SendDenial" />
+    <bpmn:sequenceFlow id="Flow_Approval_End" sourceRef="Task_SendApproval" targetRef="EndEvent_Approved" />
+    <bpmn:sequenceFlow id="Flow_Denial_End" sourceRef="Task_SendDenial" targetRef="EndEvent_Denied" />
+    <bpmn:sequenceFlow id="Flow_058lvwi" sourceRef="Task_Intake" targetRef="Task_Validate" />
+    <bpmn:sequenceFlow id="Flow_03h45ca" sourceRef="Task_ReviewResponse" targetRef="Gateway_MergeSAReferral" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="cms855i-mac-enrollment">
+      <bpmndi:BPMNShape id="Start_ReceiveApp_di" bpmnElement="Start_ReceiveApp">
+        <dc:Bounds x="162" y="532" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="155" y="575" width="54" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Intake_di" bpmnElement="Task_Intake">
+        <dc:Bounds x="270" y="510" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Verify_di" bpmnElement="Task_Verify">
+        <dc:Bounds x="670" y="510" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_CompletenessCheck_di" bpmnElement="Task_CompletenessCheck">
+        <dc:Bounds x="830" y="510" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_Completeness_di" bpmnElement="Gateway_Completeness" isMarkerVisible="true">
+        <dc:Bounds x="975" y="525" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1035" y="536" width="54" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_DevelopmentRequest_di" bpmnElement="Task_DevelopmentRequest">
+        <dc:Bounds x="1090" y="640" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Timer_ResponseWindow_di" bpmnElement="Timer_ResponseWindow">
+        <dc:Bounds x="1252" y="662" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1231" y="705" width="82" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_ResponseCheck_di" bpmnElement="Gateway_ResponseCheck" isMarkerVisible="true">
+        <dc:Bounds x="1345" y="655" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1404.5" y="666" width="59" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_ReturnApplication_di" bpmnElement="Task_ReturnApplication">
+        <dc:Bounds x="1460" y="760" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_Returned_di" bpmnElement="EndEvent_Returned">
+        <dc:Bounds x="1622" y="782" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1614" y="825" width="54" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_MergeSAReferral_di" bpmnElement="Gateway_MergeSAReferral">
+        <dc:Bounds x="1030" y="425" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_SAReferral_di" bpmnElement="Task_SAReferral">
+        <dc:Bounds x="1110" y="410" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Timer_SAReview_di" bpmnElement="Timer_SAReview">
+        <dc:Bounds x="1252" y="432" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1232" y="475" width="80" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_SAReview_di" bpmnElement="Gateway_SAReview" isMarkerVisible="true">
+        <dc:Bounds x="1345" y="425" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1329" y="485" width="82" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_FollowUpSA_di" bpmnElement="Task_FollowUpSA">
+        <dc:Bounds x="1460" y="230" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Timer_FollowUp_di" bpmnElement="Timer_FollowUp">
+        <dc:Bounds x="1632" y="252" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1616" y="295" width="71" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_FollowUpCheck_di" bpmnElement="Gateway_FollowUpCheck" isMarkerVisible="true">
+        <dc:Bounds x="1735" y="245" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1795" y="256" width="89" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_EscalateToCMS_di" bpmnElement="Task_EscalateToCMS">
+        <dc:Bounds x="1910" y="140" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_MergeSAResults_di" bpmnElement="Gateway_MergeSAResults">
+        <dc:Bounds x="1770" y="365" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_LogSAResults_di" bpmnElement="Task_LogSAResults">
+        <dc:Bounds x="1850" y="350" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_SiteVisitDetermination_di" bpmnElement="Task_SiteVisitDetermination">
+        <dc:Bounds x="1990" y="350" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_SiteVisit_di" bpmnElement="Gateway_SiteVisit" isMarkerVisible="true">
+        <dc:Bounds x="2145" y="365" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2196" y="376" width="47" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_OrderSiteVisit_di" bpmnElement="Task_OrderSiteVisit">
+        <dc:Bounds x="2260" y="270" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Timer_SiteVisit_di" bpmnElement="Timer_SiteVisit">
+        <dc:Bounds x="2422" y="292" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2398" y="335" width="87" height="40" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_SiteVisitResults_di" bpmnElement="Task_SiteVisitResults">
+        <dc:Bounds x="2520" y="270" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_ForwardToCMS_di" bpmnElement="Task_ForwardToCMS">
+        <dc:Bounds x="2260" y="410" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Timer_CMSDecision_di" bpmnElement="Timer_CMSDecision">
+        <dc:Bounds x="2422" y="432" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2402" y="475" width="80" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_CMSDecision_di" bpmnElement="Gateway_CMSDecision" isMarkerVisible="true">
+        <dc:Bounds x="2515" y="425" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2504" y="403" width="74" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_SendApproval_di" bpmnElement="Task_SendApproval">
+        <dc:Bounds x="2630" y="350" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_Approved_di" bpmnElement="EndEvent_Approved">
+        <dc:Bounds x="2792" y="372" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2767" y="415" width="88" height="40" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_SendDenial_di" bpmnElement="Task_SendDenial">
+        <dc:Bounds x="2630" y="510" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_Denied_di" bpmnElement="EndEvent_Denied">
+        <dc:Bounds x="2792" y="532" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2762" y="575" width="89" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Validate_di" bpmnElement="Task_Validate">
+        <dc:Bounds x="470" y="510" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_ReviewResponse_di" bpmnElement="Task_ReviewResponse">
+        <dc:Bounds x="1470" y="560" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_ReceiveApp_Intake_di" bpmnElement="Flow_ReceiveApp_Intake">
+        <di:waypoint x="198" y="550" />
+        <di:waypoint x="270" y="550" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_058lvwi_di" bpmnElement="Flow_058lvwi">
+        <di:waypoint x="370" y="550" />
+        <di:waypoint x="470" y="550" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Validate_Completeness_di" bpmnElement="Flow_Validate_Completeness">
+        <di:waypoint x="570" y="550" />
+        <di:waypoint x="670" y="550" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Verify_CompletenessCheck_di" bpmnElement="Flow_Verify_CompletenessCheck">
+        <di:waypoint x="770" y="550" />
+        <di:waypoint x="830" y="550" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Completeness_Gateway_di" bpmnElement="Flow_Completeness_Gateway">
+        <di:waypoint x="930" y="550" />
+        <di:waypoint x="975" y="550" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Complete_Yes_di" bpmnElement="Flow_Complete_Yes">
+        <di:waypoint x="1000" y="525" />
+        <di:waypoint x="1000" y="450" />
+        <di:waypoint x="1030" y="450" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1009" y="480" width="48" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Complete_No_di" bpmnElement="Flow_Complete_No">
+        <di:waypoint x="1000" y="575" />
+        <di:waypoint x="1000" y="680" />
+        <di:waypoint x="1090" y="680" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1011" y="622" width="54" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_DevReq_Timer_di" bpmnElement="Flow_DevReq_Timer">
+        <di:waypoint x="1190" y="680" />
+        <di:waypoint x="1252" y="680" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Timer_ResponseCheck_di" bpmnElement="Flow_Timer_ResponseCheck">
+        <di:waypoint x="1288" y="680" />
+        <di:waypoint x="1345" y="680" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Response_Yes_di" bpmnElement="Flow_Response_Yes">
+        <di:waypoint x="1370" y="655" />
+        <di:waypoint x="1370" y="600" />
+        <di:waypoint x="1470" y="600" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1385" y="620" width="57" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Response_No_di" bpmnElement="Flow_Response_No">
+        <di:waypoint x="1370" y="705" />
+        <di:waypoint x="1370" y="800" />
+        <di:waypoint x="1460" y="800" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1379" y="745" width="63" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Return_End_di" bpmnElement="Flow_Return_End">
+        <di:waypoint x="1560" y="800" />
+        <di:waypoint x="1622" y="800" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_SiteVisit_SAReferral_di" bpmnElement="Flow_SiteVisit_SAReferral">
+        <di:waypoint x="2570" y="270" />
+        <di:waypoint x="2570" y="80" />
+        <di:waypoint x="1055" y="80" />
+        <di:waypoint x="1055" y="425" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_03h45ca_di" bpmnElement="Flow_03h45ca">
+        <di:waypoint x="1520" y="560" />
+        <di:waypoint x="1520" y="520" />
+        <di:waypoint x="1055" y="520" />
+        <di:waypoint x="1055" y="475" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_MergeSAReferral_Referral_di" bpmnElement="Flow_MergeSAReferral_Referral">
+        <di:waypoint x="1080" y="450" />
+        <di:waypoint x="1110" y="450" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_SAReferral_Timer_di" bpmnElement="Flow_SAReferral_Timer">
+        <di:waypoint x="1210" y="450" />
+        <di:waypoint x="1252" y="450" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Timer_SAReviewCheck_di" bpmnElement="Flow_Timer_SAReviewCheck">
+        <di:waypoint x="1288" y="450" />
+        <di:waypoint x="1345" y="450" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_SA_Yes_di" bpmnElement="Flow_SA_Yes">
+        <di:waypoint x="1395" y="450" />
+        <di:waypoint x="1773" y="393" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1409" y="455" width="46" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_SA_No_di" bpmnElement="Flow_SA_No">
+        <di:waypoint x="1370" y="425" />
+        <di:waypoint x="1370" y="270" />
+        <di:waypoint x="1460" y="270" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1379" y="343" width="63" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_FollowUp_Timer_di" bpmnElement="Flow_FollowUp_Timer">
+        <di:waypoint x="1560" y="270" />
+        <di:waypoint x="1632" y="270" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_FollowUp_SAReviewCheck_di" bpmnElement="Flow_FollowUp_SAReviewCheck">
+        <di:waypoint x="1668" y="270" />
+        <di:waypoint x="1735" y="270" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_FollowUp_Yes_di" bpmnElement="Flow_FollowUp_Yes">
+        <di:waypoint x="1760" y="295" />
+        <di:waypoint x="1760" y="330" />
+        <di:waypoint x="1795" y="330" />
+        <di:waypoint x="1795" y="365" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1777" y="303" width="46" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_FollowUp_No_di" bpmnElement="Flow_FollowUp_No">
+        <di:waypoint x="1760" y="245" />
+        <di:waypoint x="1760" y="180" />
+        <di:waypoint x="1910" y="180" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1779" y="183" width="82" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Escalate_Forward_di" bpmnElement="Flow_Escalate_Forward">
+        <di:waypoint x="1960" y="220" />
+        <di:waypoint x="1960" y="330" />
+        <di:waypoint x="1795" y="330" />
+        <di:waypoint x="1795" y="365" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_MergeSAResults_Log_di" bpmnElement="Flow_MergeSAResults_Log">
+        <di:waypoint x="1820" y="390" />
+        <di:waypoint x="1850" y="390" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_LogSA_SiteVisitDetermination_di" bpmnElement="Flow_LogSA_SiteVisitDetermination">
+        <di:waypoint x="1950" y="390" />
+        <di:waypoint x="1990" y="390" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_SiteVisitDec_Gateway_di" bpmnElement="Flow_SiteVisitDec_Gateway">
+        <di:waypoint x="2090" y="390" />
+        <di:waypoint x="2145" y="390" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_SV_Yes_di" bpmnElement="Flow_SV_Yes">
+        <di:waypoint x="2170" y="365" />
+        <di:waypoint x="2170" y="310" />
+        <di:waypoint x="2260" y="310" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2190" y="313" width="19" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_SV_No_di" bpmnElement="Flow_SV_No">
+        <di:waypoint x="2170" y="415" />
+        <di:waypoint x="2170" y="450" />
+        <di:waypoint x="2260" y="450" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2192" y="428" width="15" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_OrderSV_Timer_di" bpmnElement="Flow_OrderSV_Timer">
+        <di:waypoint x="2360" y="310" />
+        <di:waypoint x="2422" y="310" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Timer_SVResults_di" bpmnElement="Flow_Timer_SVResults">
+        <di:waypoint x="2458" y="310" />
+        <di:waypoint x="2520" y="310" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Forward_CMSDecision_di" bpmnElement="Flow_Forward_CMSDecision">
+        <di:waypoint x="2360" y="450" />
+        <di:waypoint x="2422" y="450" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Timer_CMSCheck_di" bpmnElement="Flow_Timer_CMSCheck">
+        <di:waypoint x="2458" y="450" />
+        <di:waypoint x="2515" y="450" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_CMS_Approved_di" bpmnElement="Flow_CMS_Approved">
+        <di:waypoint x="2540" y="425" />
+        <di:waypoint x="2540" y="390" />
+        <di:waypoint x="2630" y="390" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2549" y="400" width="48" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_CMS_Denied_di" bpmnElement="Flow_CMS_Denied">
+        <di:waypoint x="2540" y="475" />
+        <di:waypoint x="2540" y="550" />
+        <di:waypoint x="2630" y="550" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2551" y="510" width="35" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Approval_End_di" bpmnElement="Flow_Approval_End">
+        <di:waypoint x="2730" y="390" />
+        <di:waypoint x="2792" y="390" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Denial_End_di" bpmnElement="Flow_Denial_End">
+        <di:waypoint x="2730" y="550" />
+        <di:waypoint x="2792" y="550" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

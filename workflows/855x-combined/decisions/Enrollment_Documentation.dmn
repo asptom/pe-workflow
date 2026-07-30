@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="https://www.omg.org/spec/DMN/20191111/MODEL/"
+             xmlns:dmndi="https://www.omg.org/spec/DMN/20191111/DMNDI/"
+             xmlns:dc="http://www.omg.org/spec/DMN/20180521/DC/"
+             xmlns:modeler="http://camunda.org/schema/modeler/1.0"
+              id="definitions_Enrollment_Documentation"
+              name="Enrollment Documentation Requirements"
+             namespace="http://camunda.org/schema/1.0/dmn"
+             exporter="Camunda Modeler"
+             exporterVersion="5.44.0"
+             modeler:executionPlatform="Camunda Cloud"
+             modeler:executionPlatformVersion="8.8.0">
+
+  <decision id="Enrollment_Documentation" name="Enrollment Documentation Requirements">
+    <decisionTable id="DecisionTable_EnrollmentDocs" hitPolicy="FIRST">
+      <input id="Input_EnrollmentType" label="Enrollment Type">
+        <inputExpression id="InputExpr_EnrollmentType" typeRef="string">
+          <text>enrollmentType</text>
+        </inputExpression>
+      </input>
+      <input id="Input_EnrollmentAction" label="Enrollment Action">
+        <inputExpression id="InputExpr_EnrollmentAction" typeRef="string">
+          <text>enrollmentAction</text>
+        </inputExpression>
+      </input>
+      <output id="Output_RequiredDocs" name="requiredDocuments" typeRef="string" />
+      <output id="Output_RequiredSections" name="requiredSections" typeRef="string" />
+
+      <!-- Rule 1: 855I + Initial Enrollment -->
+      <rule id="Rule_855I_Initial">
+        <inputEntry id="UE_855I_Init_Type"><text>"855I"</text></inputEntry>
+        <inputEntry id="UE_855I_Init_Action"><text>"Initial Enrollment"</text></inputEntry>
+        <outputEntry id="OE_855I_Init_Docs"><text>"CMS-460,CMS-588,Medical License,Board Cert,IRS CP575,Voided Check,EFT"</text></outputEntry>
+        <outputEntry id="OE_855I_Init_Sections"><text>"Sections 1A,2A,2D1,3,4A,4B,4C,4E,4F,8,12,13,15"</text></outputEntry>
+      </rule>
+
+      <!-- Rule 2: 855I + Revalidation -->
+      <rule id="Rule_855I_Revalidation">
+        <inputEntry id="UE_855I_Reval_Type"><text>"855I"</text></inputEntry>
+        <inputEntry id="UE_855I_Reval_Action"><text>"Revalidation"</text></inputEntry>
+        <outputEntry id="OE_855I_Reval_Docs"><text>"Medical License,Revalidation Notice"</text></outputEntry>
+        <outputEntry id="OE_855I_Reval_Sections"><text>"Sections 1A,2A,2D1,3,4B,4C,4E,4F,12,13,15"</text></outputEntry>
+      </rule>
+
+      <!-- Rule 3: 855A + Initial Enrollment -->
+      <rule id="Rule_855A_Initial">
+        <inputEntry id="UE_855A_Init_Type"><text>"855A"</text></inputEntry>
+        <inputEntry id="UE_855A_Init_Action"><text>"Initial Enrollment"</text></inputEntry>
+        <outputEntry id="OE_855A_Init_Docs"><text>"CMS-855A,CMS-588,Fire Safety Inspection,Life Safety Code,State Licensure,IRS CP575,Voided Check,EFT"</text></outputEntry>
+        <outputEntry id="OE_855A_Init_Sections"><text>"Sections 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15"</text></outputEntry>
+      </rule>
+
+      <!-- Rule 4: 855A + Revalidation -->
+      <rule id="Rule_855A_Revalidation">
+        <inputEntry id="UE_855A_Reval_Type"><text>"855A"</text></inputEntry>
+        <inputEntry id="UE_855A_Reval_Action"><text>"Revalidation"</text></inputEntry>
+        <outputEntry id="OE_855A_Reval_Docs"><text>"CMS-588,State Licensure,Fire Safety Inspection"</text></outputEntry>
+        <outputEntry id="OE_855A_Reval_Sections"><text>"Sections 1,2,3,4,5,12,13,15"</text></outputEntry>
+      </rule>
+
+      <!-- Rule 5: 855B + Initial Enrollment -->
+      <rule id="Rule_855B_Initial">
+        <inputEntry id="UE_855B_Init_Type"><text>"855B"</text></inputEntry>
+        <inputEntry id="UE_855B_Init_Action"><text>"Initial Enrollment"</text></inputEntry>
+        <outputEntry id="OE_855B_Init_Docs"><text>"CMS-855B,CMS-588,State DME Licensure,Surety Bond,IRS CP575,Voided Check,EFT"</text></outputEntry>
+        <outputEntry id="OE_855B_Init_Sections"><text>"Sections 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15"</text></outputEntry>
+      </rule>
+
+      <!-- Rule 6: 855B + Revalidation -->
+      <rule id="Rule_855B_Revalidation">
+        <inputEntry id="UE_855B_Reval_Type"><text>"855B"</text></inputEntry>
+        <inputEntry id="UE_855B_Reval_Action"><text>"Revalidation"</text></inputEntry>
+        <outputEntry id="OE_855B_Reval_Docs"><text>"State DME Licensure,Surety Bond"</text></outputEntry>
+        <outputEntry id="OE_855B_Reval_Sections"><text>"Sections 1,2,3,4,5,12,13,15"</text></outputEntry>
+      </rule>
+
+      <!-- Rule 7: Any + Voluntary Termination -->
+      <rule id="Rule_Any_VolTermination">
+        <inputEntry id="UE_Any_Term_Type"><text>-</text></inputEntry>
+        <inputEntry id="UE_Any_Term_Action"><text>"Voluntary Termination"</text></inputEntry>
+        <outputEntry id="OE_Any_Term_Docs"><text>"None"</text></outputEntry>
+        <outputEntry id="OE_Any_Term_Sections"><text>"Sections 1A,2A,13,15"</text></outputEntry>
+      </rule>
+
+      <!-- Rule 8: Default catch-all -->
+      <rule id="Rule_Default">
+        <inputEntry id="UE_Default_Type"><text>-</text></inputEntry>
+        <inputEntry id="UE_Default_Action"><text>-</text></inputEntry>
+        <outputEntry id="OE_Default_Docs"><text>"CMS-460,Medical License"</text></outputEntry>
+        <outputEntry id="OE_Default_Sections"><text>"Sections 1A,2A,3,15"</text></outputEntry>
+      </rule>
+    </decisionTable>
+  </decision>
+
+  <dmndi:DMNDI>
+    <dmndi:DMNDiagram id="Diagram_EnrollmentDocs" name="DRD">
+      <dmndi:DMNShape id="Decision_EnrollmentDocs_di" dmnElementRef="Enrollment_Documentation">
+        <dc:Bounds height="80" width="180" x="100" y="100" />
+      </dmndi:DMNShape>
+    </dmndi:DMNDiagram>
+  </dmndi:DMNDI>
+</definitions>

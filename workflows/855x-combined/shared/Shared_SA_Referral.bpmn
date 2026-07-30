@@ -1,0 +1,193 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="Definitions_SharedSAReferral" targetNamespace="http://bpmn.io/schema/bpmn" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.8.0">
+  <bpmn:process id="Shared_SA_Referral" isExecutable="true">
+    <bpmn:startEvent id="StartEvent_1" name="Referral Initiated">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:scriptTask id="Task_ReferToSA" name="Refer to SA/AO">
+      <bpmn:extensionElements>
+        <zeebe:script expression="&quot;Referral submitted to SA/AO for review&quot;" resultVariable="referralStatus" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+    </bpmn:scriptTask>
+    <bpmn:intermediateCatchEvent id="Timer_45DayReview" name="45-day review">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">="P45D"</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:exclusiveGateway id="XOR_Responded" name="SA/AO responded?" default="Flow_No1">
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+      <bpmn:outgoing>Flow_Yes1</bpmn:outgoing>
+      <bpmn:outgoing>Flow_No1</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:exclusiveGateway id="XOR_Merge" name="Merge">
+      <bpmn:incoming>Flow_Yes1</bpmn:incoming>
+      <bpmn:incoming>Flow_Yes2</bpmn:incoming>
+      <bpmn:incoming>Flow_No2</bpmn:incoming>
+      <bpmn:outgoing>Flow_ToEnd</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="EndEvent_1" name="Referral Complete">
+      <bpmn:incoming>Flow_ToEnd</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:scriptTask id="Task_SendFollowUp" name="Send Follow-up">
+      <bpmn:extensionElements>
+        <zeebe:script expression="&quot;Follow-up sent to SA/AO&quot;" resultVariable="followUpStatus" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_No1</bpmn:incoming>
+      <bpmn:outgoing>Flow_4</bpmn:outgoing>
+    </bpmn:scriptTask>
+    <bpmn:intermediateCatchEvent id="Timer_14DayFollowUp" name="14-day follow-up">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">="P14D"</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+      <bpmn:incoming>Flow_4</bpmn:incoming>
+      <bpmn:outgoing>Flow_5</bpmn:outgoing>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:exclusiveGateway id="XOR_RespondedAfterFollowUp" name="Responded after follow-up?" default="Flow_No2">
+      <bpmn:incoming>Flow_5</bpmn:incoming>
+      <bpmn:outgoing>Flow_Yes2</bpmn:outgoing>
+      <bpmn:outgoing>Flow_No2</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:scriptTask id="Task_EscalateToCMS" name="Escalate to CMS">
+      <bpmn:extensionElements>
+        <zeebe:script expression="&quot;Escalated to CMS for resolution&quot;" resultVariable="escalationStatus" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_No2</bpmn:incoming>
+      <bpmn:outgoing>Flow_FromEscalate</bpmn:outgoing>
+    </bpmn:scriptTask>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="Task_ReferToSA" />
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_ReferToSA" targetRef="Timer_45DayReview" />
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="Timer_45DayReview" targetRef="XOR_Responded" />
+    <bpmn:sequenceFlow id="Flow_Yes1" name="Received" sourceRef="XOR_Responded" targetRef="XOR_Merge">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=referral.saAoResponseReceived = true</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_No1" name="No response" sourceRef="XOR_Responded" targetRef="Task_SendFollowUp" />
+    <bpmn:sequenceFlow id="Flow_4" sourceRef="Task_SendFollowUp" targetRef="Timer_14DayFollowUp" />
+    <bpmn:sequenceFlow id="Flow_5" sourceRef="Timer_14DayFollowUp" targetRef="XOR_RespondedAfterFollowUp" />
+    <bpmn:sequenceFlow id="Flow_Yes2" name="Received" sourceRef="XOR_RespondedAfterFollowUp" targetRef="XOR_Merge">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=referral.saAoResponseReceived = true</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_No2" name="Still no response" sourceRef="XOR_RespondedAfterFollowUp" targetRef="Task_EscalateToCMS" />
+    <bpmn:sequenceFlow id="Flow_FromEscalate" sourceRef="Task_EscalateToCMS" targetRef="XOR_Merge" />
+    <bpmn:sequenceFlow id="Flow_ToEnd" sourceRef="XOR_Merge" targetRef="EndEvent_1" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Shared_SA_Referral">
+      <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
+        <dc:Bounds x="152" y="302" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="130" y="345" width="80" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_ReferToSA_di" bpmnElement="Task_ReferToSA">
+        <dc:Bounds x="240" y="280" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Timer_45DayReview_di" bpmnElement="Timer_45DayReview">
+        <dc:Bounds x="402" y="302" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="385" y="345" width="70" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="XOR_Responded_di" bpmnElement="XOR_Responded" isMarkerVisible="true">
+        <dc:Bounds x="505" y="295" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="485" y="275" width="90" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="XOR_Merge_di" bpmnElement="XOR_Merge" isMarkerVisible="true">
+        <dc:Bounds x="905" y="295" width="50" height="50" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1">
+        <dc:Bounds x="1007" y="317" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="985" y="360" width="80" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_SendFollowUp_di" bpmnElement="Task_SendFollowUp">
+        <dc:Bounds x="500" y="130" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Timer_14DayFollowUp_di" bpmnElement="Timer_14DayFollowUp">
+        <dc:Bounds x="662" y="152" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="645" y="195" width="70" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="XOR_RespondedAfterFollowUp_di" bpmnElement="XOR_RespondedAfterFollowUp" isMarkerVisible="true">
+        <dc:Bounds x="765" y="145" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="745" y="125" width="90" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_EscalateToCMS_di" bpmnElement="Task_EscalateToCMS">
+        <dc:Bounds x="765" y="40" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
+        <di:waypoint x="188" y="320" />
+        <di:waypoint x="240" y="320" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">
+        <di:waypoint x="340" y="320" />
+        <di:waypoint x="402" y="320" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_3_di" bpmnElement="Flow_3">
+        <di:waypoint x="438" y="320" />
+        <di:waypoint x="505" y="320" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Yes1_di" bpmnElement="Flow_Yes1">
+        <di:waypoint x="555" y="320" />
+        <di:waypoint x="905" y="320" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="700" y="325" width="20" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_No1_di" bpmnElement="Flow_No1">
+        <di:waypoint x="530" y="295" />
+        <di:waypoint x="530" y="210" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="535" y="250" width="20" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_4_di" bpmnElement="Flow_4">
+        <di:waypoint x="600" y="170" />
+        <di:waypoint x="662" y="170" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_5_di" bpmnElement="Flow_5">
+        <di:waypoint x="698" y="170" />
+        <di:waypoint x="765" y="170" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Yes2_di" bpmnElement="Flow_Yes2">
+        <di:waypoint x="815" y="170" />
+        <di:waypoint x="870" y="170" />
+        <di:waypoint x="870" y="320" />
+        <di:waypoint x="905" y="320" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="830" y="175" width="20" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_No2_di" bpmnElement="Flow_No2">
+        <di:waypoint x="790" y="145" />
+        <di:waypoint x="790" y="120" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="795" y="130" width="20" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_FromEscalate_di" bpmnElement="Flow_FromEscalate">
+        <di:waypoint x="815" y="80" />
+        <di:waypoint x="870" y="80" />
+        <di:waypoint x="870" y="320" />
+        <di:waypoint x="905" y="320" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ToEnd_di" bpmnElement="Flow_ToEnd">
+        <di:waypoint x="955" y="320" />
+        <di:waypoint x="1007" y="335" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

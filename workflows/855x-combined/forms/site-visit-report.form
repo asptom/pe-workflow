@@ -1,0 +1,86 @@
+{
+  "components": [
+    {
+      "type": "text",
+      "id": "Text_header",
+      "text": "### Facility Site Visit Report",
+      "layout": { "row": "row_0", "columns": null }
+    },
+    {
+      "type": "group",
+      "id": "Group_siteVerification",
+      "label": "Site Verification",
+      "showOutline": true,
+      "layout": { "row": "row_1", "columns": null },
+      "components": [
+        {
+          "type": "checkbox",
+          "id": "Field_siteVerified",
+          "key": "siteVerified",
+          "label": "Site Verified",
+          "layout": { "row": "row_g0", "columns": null },
+          "validate": { "required": true }
+        },
+        {
+          "type": "textfield",
+          "id": "Field_siteAddress",
+          "key": "siteAddress",
+          "label": "Verified Address",
+          "layout": { "row": "row_g1", "columns": null }
+        },
+        {
+          "type": "datetime",
+          "id": "Field_siteVisitDate",
+          "key": "siteVisitDate",
+          "label": "Visit Date",
+          "subtype": "date",
+          "layout": { "row": "row_g2", "columns": null }
+        }
+      ]
+    },
+    {
+      "type": "group",
+      "id": "Group_findings",
+      "label": "Findings",
+      "showOutline": true,
+      "layout": { "row": "row_2", "columns": null },
+      "components": [
+        {
+          "type": "textarea",
+          "id": "Field_deficienciesFound",
+          "key": "deficienciesFound",
+          "label": "Deficiencies Found",
+          "rows": 4,
+          "layout": { "row": "row_g0", "columns": null }
+        },
+        {
+          "type": "textarea",
+          "id": "Field_correctiveActionPlan",
+          "key": "correctiveActionPlan",
+          "label": "Corrective Action Plan",
+          "rows": 4,
+          "layout": { "row": "row_g1", "columns": null }
+        },
+        {
+          "type": "checkbox",
+          "id": "Field_fireSafetyCompliant",
+          "key": "fireSafetyCompliant",
+          "label": "Fire Safety Inspection Passed",
+          "layout": { "row": "row_g2", "columns": null },
+          "conditional": {
+            "hide": "=provider.enrollmentType != \"855A\""
+          }
+        }
+      ]
+    }
+  ],
+  "executionPlatform": "Camunda Cloud",
+  "executionPlatformVersion": "8.8.0",
+  "exporter": {
+    "name": "Camunda Modeler",
+    "version": "5.34.0"
+  },
+  "schemaVersion": 18,
+  "id": "site-visit-report",
+  "type": "default"
+}

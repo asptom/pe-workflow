@@ -1,0 +1,98 @@
+{
+  "components": [
+    {
+      "type": "text",
+      "id": "Text_header",
+      "text": "### CMS Provider Enrollment - Application Intake",
+      "layout": { "row": "row_0", "columns": null }
+    },
+    {
+      "type": "group",
+      "id": "Group_enrollment",
+      "label": "Enrollment Information",
+      "showOutline": true,
+      "layout": { "row": "row_1", "columns": null },
+      "components": [
+        {
+          "type": "select",
+          "id": "Field_enrollmentType",
+          "key": "provider.enrollmentType",
+          "label": "Enrollment Type",
+          "layout": { "row": "row_g0", "columns": null },
+          "values": [
+            { "label": "855I - Individual Practitioner", "value": "855I" },
+            { "label": "855A - Organization/Facility", "value": "855A" },
+            { "label": "855B - DMEPOS Supplier", "value": "855B" }
+          ],
+          "validate": { "required": true }
+        },
+        {
+          "type": "textfield",
+          "id": "Field_legalName",
+          "key": "provider.legalName",
+          "label": "Legal Business Name",
+          "layout": { "row": "row_g1", "columns": null },
+          "validate": { "required": true }
+        },
+        {
+          "type": "textfield",
+          "id": "Field_npi",
+          "key": "provider.npi",
+          "label": "NPI",
+          "layout": { "row": "row_g2", "columns": null },
+          "validate": {
+            "required": true,
+            "pattern": "^[0-9]{10}$",
+            "patternErrorMessage": "NPI must be exactly 10 digits"
+          }
+        },
+        {
+          "type": "textfield",
+          "id": "Field_tin",
+          "key": "provider.tin",
+          "label": "TIN",
+          "layout": { "row": "row_g3", "columns": null },
+          "validate": { "required": true }
+        }
+      ]
+    },
+    {
+      "type": "group",
+      "id": "Group_submission",
+      "label": "Submission Details",
+      "showOutline": true,
+      "layout": { "row": "row_2", "columns": null },
+      "components": [
+        {
+          "type": "select",
+          "id": "Field_submissionMethod",
+          "key": "submissionMethod",
+          "label": "Submission Method",
+          "layout": { "row": "row_g0", "columns": null },
+          "values": [
+            { "label": "PECOS", "value": "PECOS" },
+            { "label": "Paper", "value": "Paper" }
+          ]
+        },
+        {
+          "type": "datetime",
+          "id": "Field_filingDate",
+          "key": "provider.filingDate",
+          "label": "Filing Date",
+          "subtype": "date",
+          "layout": { "row": "row_g1", "columns": null },
+          "validate": { "required": true }
+        }
+      ]
+    }
+  ],
+  "executionPlatform": "Camunda Cloud",
+  "executionPlatformVersion": "8.8.0",
+  "exporter": {
+    "name": "Camunda Modeler",
+    "version": "5.34.0"
+  },
+  "schemaVersion": 18,
+  "id": "enrollment-start",
+  "type": "default"
+}

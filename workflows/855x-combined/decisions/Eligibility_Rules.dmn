@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="https://www.omg.org/spec/DMN/20191111/MODEL/"
+             xmlns:dmndi="https://www.omg.org/spec/DMN/20191111/DMNDI/"
+             xmlns:dc="http://www.omg.org/spec/DMN/20180521/DC/"
+             xmlns:modeler="http://camunda.org/schema/modeler/1.0"
+              id="definitions_Eligibility_Rules"
+              name="Enrollment Eligibility Rules"
+             namespace="http://camunda.org/schema/1.0/dmn"
+             exporter="Camunda Modeler"
+             exporterVersion="5.44.0"
+             modeler:executionPlatform="Camunda Cloud"
+             modeler:executionPlatformVersion="8.8.0">
+
+  <decision id="Eligibility_Rules" name="Enrollment Eligibility Rules">
+    <decisionTable id="DecisionTable_Eligibility" hitPolicy="FIRST">
+      <input id="Input_EnrollmentType" label="Enrollment Type">
+        <inputExpression id="InputExpr_EnrollmentType" typeRef="string">
+          <text>enrollmentType</text>
+        </inputExpression>
+      </input>
+      <input id="Input_ProviderRiskScore" label="Provider Risk Score">
+        <inputExpression id="InputExpr_RiskScore" typeRef="number">
+          <text>providerRiskScore</text>
+        </inputExpression>
+      </input>
+      <input id="Input_NpiIsActive" label="NPI Is Active">
+        <inputExpression id="InputExpr_NpiActive" typeRef="boolean">
+          <text>npiIsActive</text>
+        </inputExpression>
+      </input>
+      <input id="Input_OigCleared" label="OIG Cleared">
+        <inputExpression id="InputExpr_OigCleared" typeRef="boolean">
+          <text>oigCleared</text>
+        </inputExpression>
+      </input>
+      <output id="Output_EligibilityStatus" name="eligibilityStatus" typeRef="string" />
+      <output id="Output_SiteVisitRequired" name="siteVisitRequired" typeRef="boolean" />
+
+      <!-- Rule 1: NPI not active → INELIGIBLE -->
+      <rule id="Rule_NPI_Inactive">
+        <inputEntry id="UE_Elig_NPI_Type"><text>-</text></inputEntry>
+        <inputEntry id="UE_Elig_NPI_Score"><text>-</text></inputEntry>
+        <inputEntry id="UE_Elig_NPI_Active"><text>false</text></inputEntry>
+        <inputEntry id="UE_Elig_NPI_Oig"><text>-</text></inputEntry>
+        <outputEntry id="OE_Elig_NPI_Status"><text>"INELIGIBLE"</text></outputEntry>
+        <outputEntry id="OE_Elig_NPI_SV"><text>false</text></outputEntry>
+      </rule>
+
+      <!-- Rule 2: OIG not cleared → INELIGIBLE -->
+      <rule id="Rule_OIG_Uncleared">
+        <inputEntry id="UE_Elig_OIG_Type"><text>-</text></inputEntry>
+        <inputEntry id="UE_Elig_OIG_Score"><text>-</text></inputEntry>
+        <inputEntry id="UE_Elig_OIG_Active"><text>-</text></inputEntry>
+        <inputEntry id="UE_Elig_OIG_Cleared"><text>false</text></inputEntry>
+        <outputEntry id="OE_Elig_OIG_Status"><text>"INELIGIBLE"</text></outputEntry>
+        <outputEntry id="OE_Elig_OIG_SV"><text>false</text></outputEntry>
+      </rule>
+
+      <!-- Rule 3: Risk score >= 75 → CONDITIONAL + site visit -->
+      <rule id="Rule_HighRisk">
+        <inputEntry id="UE_Elig_HR_Type"><text>-</text></inputEntry>
+        <inputEntry id="UE_Elig_HR_Score"><text><![CDATA[>= 75]]></text></inputEntry>
+        <inputEntry id="UE_Elig_HR_Active"><text>-</text></inputEntry>
+        <inputEntry id="UE_Elig_HR_Oig"><text>-</text></inputEntry>
+        <outputEntry id="OE_Elig_HR_Status"><text>"CONDITIONAL"</text></outputEntry>
+        <outputEntry id="OE_Elig_HR_SV"><text>true</text></outputEntry>
+      </rule>
+
+      <!-- Rule 4: Risk score >= 50 → CONDITIONAL, no site visit -->
+      <rule id="Rule_MediumRisk">
+        <inputEntry id="UE_Elig_MR_Type"><text>-</text></inputEntry>
+        <inputEntry id="UE_Elig_MR_Score"><text><![CDATA[>= 50]]></text></inputEntry>
+        <inputEntry id="UE_Elig_MR_Active"><text>-</text></inputEntry>
+        <inputEntry id="UE_Elig_MR_Oig"><text>-</text></inputEntry>
+        <outputEntry id="OE_Elig_MR_Status"><text>"CONDITIONAL"</text></outputEntry>
+        <outputEntry id="OE_Elig_MR_SV"><text>false</text></outputEntry>
+      </rule>
+
+      <!-- Rule 5: Default → ELIGIBLE -->
+      <rule id="Rule_Default_Eligible">
+        <inputEntry id="UE_Elig_Def_Type"><text>-</text></inputEntry>
+        <inputEntry id="UE_Elig_Def_Score"><text>-</text></inputEntry>
+        <inputEntry id="UE_Elig_Def_Active"><text>-</text></inputEntry>
+        <inputEntry id="UE_Elig_Def_Oig"><text>-</text></inputEntry>
+        <outputEntry id="OE_Elig_Def_Status"><text>"ELIGIBLE"</text></outputEntry>
+        <outputEntry id="OE_Elig_Def_SV"><text>false</text></outputEntry>
+      </rule>
+    </decisionTable>
+  </decision>
+
+  <dmndi:DMNDI>
+    <dmndi:DMNDiagram id="Diagram_Eligibility" name="DRD">
+      <dmndi:DMNShape id="Decision_Eligibility_di" dmnElementRef="Eligibility_Rules">
+        <dc:Bounds height="80" width="180" x="100" y="100" />
+      </dmndi:DMNShape>
+    </dmndi:DMNDiagram>
+  </dmndi:DMNDI>
+</definitions>

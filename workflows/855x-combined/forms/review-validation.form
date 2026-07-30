@@ -1,0 +1,105 @@
+{
+  "components": [
+    {
+      "type": "text",
+      "id": "Text_header",
+      "text": "### Validation Results Review",
+      "layout": { "row": "row_0", "columns": null }
+    },
+    {
+      "type": "group",
+      "id": "Group_automatedValidation",
+      "label": "Automated Validation",
+      "showOutline": true,
+      "layout": { "row": "row_1", "columns": null },
+      "components": [
+        {
+          "type": "checkbox",
+          "id": "Field_npiIsActive",
+          "key": "validation.npiIsActive",
+          "label": "NPI Active",
+          "disabled": true,
+          "layout": { "row": "row_g0", "columns": null }
+        },
+        {
+          "type": "checkbox",
+          "id": "Field_npiMatchesTin",
+          "key": "validation.npiMatchesTIN",
+          "label": "TIN Matches NPI",
+          "disabled": true,
+          "layout": { "row": "row_g1", "columns": null }
+        },
+        {
+          "type": "checkbox",
+          "id": "Field_licenseValid",
+          "key": "validation.licenseValid",
+          "label": "License Valid",
+          "disabled": true,
+          "layout": { "row": "row_g2", "columns": null }
+        },
+        {
+          "type": "checkbox",
+          "id": "Field_oigCleared",
+          "key": "verification.oigCleared",
+          "label": "OIG Cleared",
+          "disabled": true,
+          "layout": { "row": "row_g3", "columns": null }
+        },
+        {
+          "type": "checkbox",
+          "id": "Field_samCleared",
+          "key": "verification.samCleared",
+          "label": "SAM Cleared",
+          "disabled": true,
+          "layout": { "row": "row_g4", "columns": null }
+        },
+        {
+          "type": "textfield",
+          "id": "Field_fingerprintStatus",
+          "key": "verification.fingerprintStatus",
+          "label": "Fingerprint Status",
+          "disabled": true,
+          "layout": { "row": "row_g5", "columns": null }
+        }
+      ]
+    },
+    {
+      "type": "group",
+      "id": "Group_reviewerDecision",
+      "label": "Reviewer Decision",
+      "showOutline": true,
+      "layout": { "row": "row_2", "columns": null },
+      "components": [
+        {
+          "type": "textarea",
+          "id": "Field_reviewComments",
+          "key": "reviewComments",
+          "label": "Reviewer Comments",
+          "rows": 4,
+          "layout": { "row": "row_g0", "columns": null }
+        },
+        {
+          "type": "radio",
+          "id": "Field_approvalDecision",
+          "key": "approvalDecision",
+          "label": "Decision",
+          "layout": { "row": "row_g1", "columns": null },
+          "values": [
+            { "label": "Approve", "value": "Approve" },
+            { "label": "Deny", "value": "Deny" }
+          ],
+          "validate": { "required": true }
+        }
+      ]
+    }
+  ],
+  "executionPlatform": "Camunda Cloud",
+  "executionPlatformVersion": "8.8.0",
+  "exporter": {
+    "name": "Camunda Modeler",
+    "version": "5.34.0"
+  },
+  "schemaVersion": 18,
+  "id": "review-validation",
+  "type": "default"
+}

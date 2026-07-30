@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="https://www.omg.org/spec/DMN/20191111/MODEL/"
+             xmlns:dmndi="https://www.omg.org/spec/DMN/20191111/DMNDI/"
+             xmlns:dc="http://www.omg.org/spec/DMN/20180521/DC/"
+             xmlns:modeler="http://camunda.org/schema/modeler/1.0"
+              id="definitions_Processing_Timeline"
+              name="Processing Timeline Estimate"
+             namespace="http://camunda.org/schema/1.0/dmn"
+             exporter="Camunda Modeler"
+             exporterVersion="5.44.0"
+             modeler:executionPlatform="Camunda Cloud"
+             modeler:executionPlatformVersion="8.8.0">
+
+  <decision id="Processing_Timeline" name="Processing Timeline Estimate">
+    <decisionTable id="DecisionTable_Timeline" hitPolicy="UNIQUE">
+      <input id="Input_SubmissionMethod" label="Submission Method">
+        <inputExpression id="InputExpr_Method" typeRef="string">
+          <text>submissionMethod</text>
+        </inputExpression>
+      </input>
+      <input id="Input_SiteVisitRequired" label="Site Visit Required">
+        <inputExpression id="InputExpr_SV" typeRef="boolean">
+          <text>siteVisitRequired</text>
+        </inputExpression>
+      </input>
+      <output id="Output_IntakeDays" name="intakeDays" typeRef="number" />
+      <output id="Output_ValidationDays" name="validationDays" typeRef="number" />
+      <output id="Output_SaAoReviewDays" name="saAoReviewDays" typeRef="number" />
+      <output id="Output_SiteVisitDays" name="siteVisitDays" typeRef="number" />
+      <output id="Output_CmsDecisionDays" name="cmsDecisionDays" typeRef="number" />
+      <output id="Output_TotalEstimateDays" name="totalEstimateDays" typeRef="number" />
+
+      <!-- Rule 1: PECOS + site visit required -->
+      <rule id="Rule_PECOS_SV">
+        <inputEntry id="UE_TL_PECOS_SV_Method"><text>"PECOS"</text></inputEntry>
+        <inputEntry id="UE_TL_PECOS_SV_Required"><text>true</text></inputEntry>
+        <outputEntry id="OE_TL_PECOS_SV_Intake"><text>5</text></outputEntry>
+        <outputEntry id="OE_TL_PECOS_SV_Validation"><text>10</text></outputEntry>
+        <outputEntry id="OE_TL_PECOS_SV_SaAo"><text>45</text></outputEntry>
+        <outputEntry id="OE_TL_PECOS_SV_SV"><text>45</text></outputEntry>
+        <outputEntry id="OE_TL_PECOS_SV_Cms"><text>30</text></outputEntry>
+        <outputEntry id="OE_TL_PECOS_SV_Total"><text>135</text></outputEntry>
+      </rule>
+
+      <!-- Rule 2: PECOS + no site visit -->
+      <rule id="Rule_PECOS_NoSV">
+        <inputEntry id="UE_TL_PECOS_NoSV_Method"><text>"PECOS"</text></inputEntry>
+        <inputEntry id="UE_TL_PECOS_NoSV_Required"><text>false</text></inputEntry>
+        <outputEntry id="OE_TL_PECOS_NoSV_Intake"><text>5</text></outputEntry>
+        <outputEntry id="OE_TL_PECOS_NoSV_Validation"><text>10</text></outputEntry>
+        <outputEntry id="OE_TL_PECOS_NoSV_SaAo"><text>45</text></outputEntry>
+        <outputEntry id="OE_TL_PECOS_NoSV_SV"><text>0</text></outputEntry>
+        <outputEntry id="OE_TL_PECOS_NoSV_Cms"><text>30</text></outputEntry>
+        <outputEntry id="OE_TL_PECOS_NoSV_Total"><text>90</text></outputEntry>
+      </rule>
+
+      <!-- Rule 3: Paper + site visit required -->
+      <rule id="Rule_Paper_SV">
+        <inputEntry id="UE_TL_Paper_SV_Method"><text>"Paper"</text></inputEntry>
+        <inputEntry id="UE_TL_Paper_SV_Required"><text>true</text></inputEntry>
+        <outputEntry id="OE_TL_Paper_SV_Intake"><text>15</text></outputEntry>
+        <outputEntry id="OE_TL_Paper_SV_Validation"><text>15</text></outputEntry>
+        <outputEntry id="OE_TL_Paper_SV_SaAo"><text>45</text></outputEntry>
+        <outputEntry id="OE_TL_Paper_SV_SV"><text>45</text></outputEntry>
+        <outputEntry id="OE_TL_Paper_SV_Cms"><text>30</text></outputEntry>
+        <outputEntry id="OE_TL_Paper_SV_Total"><text>150</text></outputEntry>
+      </rule>
+
+      <!-- Rule 4: Paper + no site visit -->
+      <rule id="Rule_Paper_NoSV">
+        <inputEntry id="UE_TL_Paper_NoSV_Method"><text>"Paper"</text></inputEntry>
+        <inputEntry id="UE_TL_Paper_NoSV_Required"><text>false</text></inputEntry>
+        <outputEntry id="OE_TL_Paper_NoSV_Intake"><text>15</text></outputEntry>
+        <outputEntry id="OE_TL_Paper_NoSV_Validation"><text>15</text></outputEntry>
+        <outputEntry id="OE_TL_Paper_NoSV_SaAo"><text>45</text></outputEntry>
+        <outputEntry id="OE_TL_Paper_NoSV_SV"><text>0</text></outputEntry>
+        <outputEntry id="OE_TL_Paper_NoSV_Cms"><text>30</text></outputEntry>
+        <outputEntry id="OE_TL_Paper_NoSV_Total"><text>105</text></outputEntry>
+      </rule>
+    </decisionTable>
+  </decision>
+
+  <dmndi:DMNDI>
+    <dmndi:DMNDiagram id="Diagram_Timeline" name="DRD">
+      <dmndi:DMNShape id="Decision_Timeline_di" dmnElementRef="Processing_Timeline">
+        <dc:Bounds height="80" width="180" x="100" y="100" />
+      </dmndi:DMNShape>
+    </dmndi:DMNDiagram>
+  </dmndi:DMNDI>
+</definitions>

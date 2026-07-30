@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="Definitions_3" targetNamespace="http://bpmn.io/schema/bpmn" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.8.0">
+  <bpmn:process id="Delegate_855B" name="Delegate 855B - DMEPOS Supplier Enrollment" isExecutable="true">
+    <bpmn:startEvent id="Start_855B" name="Start 855B">
+      <bpmn:outgoing>Flow_855B_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:callActivity id="Call_855B_Intake" name="Execute Intake">
+      <bpmn:extensionElements>
+        <zeebe:calledElement processId="Shared_Intake" propagateAllChildVariables="false" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_855B_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_855B_2</bpmn:outgoing>
+    </bpmn:callActivity>
+    <bpmn:callActivity id="Call_855B_OIG" name="Execute OIG Screening">
+      <bpmn:extensionElements>
+        <zeebe:calledElement processId="Shared_OIG_Screening" propagateAllChildVariables="false" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_855B_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_855B_3</bpmn:outgoing>
+    </bpmn:callActivity>
+    <bpmn:scriptTask id="Script_855B_StateLicense" name="Verify DME State Licensure">
+      <bpmn:extensionElements>
+        <zeebe:script expression="=if provider.entityType = &quot;DME Supplier&quot; and provider.stateLicenseNumber != null then true else false" resultVariable="validation.licenseValid" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_855B_3</bpmn:incoming>
+      <bpmn:outgoing>Flow_855B_4</bpmn:outgoing>
+    </bpmn:scriptTask>
+    <bpmn:scriptTask id="Script_855B_Bond" name="Verify Surety Bond">
+      <bpmn:extensionElements>
+        <zeebe:script expression="=if provider.suretyBondAmount &gt;= 50000 then true else false" resultVariable="provider.suretyBondValid" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_855B_4</bpmn:incoming>
+      <bpmn:outgoing>Flow_855B_5</bpmn:outgoing>
+    </bpmn:scriptTask>
+    <bpmn:scriptTask id="Script_855B_Equipment" name="Verify Equipment Licensure">
+      <bpmn:extensionElements>
+        <zeebe:script expression="=if provider.equipmentLicenseNumber != null then true else false" resultVariable="provider.equipmentLicensureValid" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_855B_5</bpmn:incoming>
+      <bpmn:outgoing>Flow_855B_6</bpmn:outgoing>
+    </bpmn:scriptTask>
+    <bpmn:callActivity id="Call_855B_SA" name="Execute SA Referral">
+      <bpmn:extensionElements>
+        <zeebe:calledElement processId="Shared_SA_Referral" propagateAllChildVariables="false" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_855B_6</bpmn:incoming>
+      <bpmn:outgoing>Flow_855B_7</bpmn:outgoing>
+    </bpmn:callActivity>
+    <bpmn:endEvent id="End_855B" name="End 855B">
+      <bpmn:incoming>Flow_855B_7</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_855B_1" sourceRef="Start_855B" targetRef="Call_855B_Intake" />
+    <bpmn:sequenceFlow id="Flow_855B_2" sourceRef="Call_855B_Intake" targetRef="Call_855B_OIG" />
+    <bpmn:sequenceFlow id="Flow_855B_3" sourceRef="Call_855B_OIG" targetRef="Script_855B_StateLicense" />
+    <bpmn:sequenceFlow id="Flow_855B_4" sourceRef="Script_855B_StateLicense" targetRef="Script_855B_Bond" />
+    <bpmn:sequenceFlow id="Flow_855B_5" sourceRef="Script_855B_Bond" targetRef="Script_855B_Equipment" />
+    <bpmn:sequenceFlow id="Flow_855B_6" sourceRef="Script_855B_Equipment" targetRef="Call_855B_SA" />
+    <bpmn:sequenceFlow id="Flow_855B_7" sourceRef="Call_855B_SA" targetRef="End_855B" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_3">
+    <bpmndi:BPMNPlane id="BPMNPlane_3" bpmnElement="Delegate_855B">
+      <bpmndi:BPMNShape id="Shape_855B_Start" bpmnElement="Start_855B">
+        <dc:Bounds x="152" y="102" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_855B_Call_Intake" bpmnElement="Call_855B_Intake">
+        <dc:Bounds x="240" y="80" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_855B_Call_OIG" bpmnElement="Call_855B_OIG">
+        <dc:Bounds x="440" y="80" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_855B_Script_StateLicense" bpmnElement="Script_855B_StateLicense">
+        <dc:Bounds x="640" y="80" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_855B_Script_Bond" bpmnElement="Script_855B_Bond">
+        <dc:Bounds x="840" y="80" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_855B_Script_Equipment" bpmnElement="Script_855B_Equipment">
+        <dc:Bounds x="1040" y="80" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_855B_Call_SA" bpmnElement="Call_855B_SA">
+        <dc:Bounds x="1240" y="80" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_855B_End" bpmnElement="End_855B">
+        <dc:Bounds x="1440" y="102" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Edge_855B_1" bpmnElement="Flow_855B_1">
+        <di:waypoint x="188" y="120" />
+        <di:waypoint x="240" y="120" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_855B_2" bpmnElement="Flow_855B_2">
+        <di:waypoint x="340" y="120" />
+        <di:waypoint x="440" y="120" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_855B_3" bpmnElement="Flow_855B_3">
+        <di:waypoint x="540" y="120" />
+        <di:waypoint x="640" y="120" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_855B_4" bpmnElement="Flow_855B_4">
+        <di:waypoint x="740" y="120" />
+        <di:waypoint x="840" y="120" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_855B_5" bpmnElement="Flow_855B_5">
+        <di:waypoint x="940" y="120" />
+        <di:waypoint x="1040" y="120" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_855B_6" bpmnElement="Flow_855B_6">
+        <di:waypoint x="1140" y="120" />
+        <di:waypoint x="1240" y="120" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_855B_7" bpmnElement="Flow_855B_7">
+        <di:waypoint x="1340" y="120" />
+        <di:waypoint x="1440" y="120" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

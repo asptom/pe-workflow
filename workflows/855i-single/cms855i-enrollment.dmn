@@ -1,0 +1,349 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="https://www.omg.org/spec/DMN/20191111/MODEL/" xmlns:dmndi="https://www.omg.org/spec/DMN/20191111/DMNDI/" xmlns:dc="http://www.omg.org/spec/DMN/20180521/DC/" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="cms855i-enrollment-decisions" name="CMS-855I Enrollment Decisions" namespace="http://camunda.org/schema/1.0/dmn" exporter="Camunda Modeler" exporterVersion="5.44.0" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.9.0">
+
+  <!-- Decision 1: Determine required documentation based on provider type and enrollment action -->
+  <decision id="required-documentation" name="Required Documentation">
+    <decisionTable id="DecisionTable_RequiredDocs" hitPolicy="FIRST">
+      <input id="Input_ProviderType" label="Provider Type">
+        <inputExpression id="InputExpr_ProviderType" typeRef="string">
+          <text>providerType</text>
+        </inputExpression>
+      </input>
+      <input id="Input_EnrollmentAction" label="Enrollment Action">
+        <inputExpression id="InputExpr_EnrollmentAction" typeRef="string">
+          <text>enrollmentAction</text>
+        </inputExpression>
+      </input>
+      <input id="Input_HasAdverseAction" label="Has Adverse Legal Action">
+        <inputExpression id="InputExpr_HasAdverseAction" typeRef="boolean">
+          <text>hasAdverseLegalAction</text>
+        </inputExpression>
+      </input>
+      <input id="Input_IsSoleOwner" label="Is Sole Owner or Sole Proprietor">
+        <inputExpression id="InputExpr_IsSoleOwner" typeRef="boolean">
+          <text>isSoleOwner</text>
+        </inputExpression>
+      </input>
+      <input id="Input_ReassignsBenefits" label="Reassigns Benefits">
+        <inputExpression id="InputExpr_ReassignsBenefits" typeRef="boolean">
+          <text>reassignsBenefits</text>
+        </inputExpression>
+      </input>
+      <output id="Output_RequiredDocs" name="Required Documents" typeRef="string" />
+      <output id="Output_SectionsRequired" name="Required Sections" typeRef="string" />
+      <output id="Output_Notes" name="Processing Notes" typeRef="string" />
+
+      <!-- Initial Enrollment - Physician - Sole Owner - Reassigning -->
+      <rule id="Rule_Init_Phys_Sole_Reassign">
+        <inputEntry id="UE_Init_Phys"><text>"Physician"</text></inputEntry>
+        <inputEntry id="UE_Init_Act"><text>"Initial Enrollment"</text></inputEntry>
+        <inputEntry id="UE_Init_Adverse"><text>true</text></inputEntry>
+        <inputEntry id="UE_Init_Sole"><text>true</text></inputEntry>
+        <inputEntry id="UE_Init_Reassign"><text>true</text></inputEntry>
+        <outputEntry id="OE_Init_Phys_Sole_Reassign_Docs"><text>"CMS-460,CMS-588,IRS-CP575,MedicalLicense,BoardCert,AdverseActionDocs,VoidedCheck,EFT"</text></outputEntry>
+        <outputEntry id="OE_Init_Phys_Sole_Reassign_Sections"><text>"1A,2A,2D1,3,4A,4B,4C,4E,4F,8,12,13,15"</text></outputEntry>
+        <outputEntry id="OE_Init_Phys_Sole_Reassign_Notes"><text>"Physician initial enrollment with reassignment. All sections required. Must have IRS document confirming TIN/LBN. Adverse legal action documentation required."</text></outputEntry>
+      </rule>
+
+      <!-- Initial Enrollment - Physician - Not Sole Owner - Reassigning -->
+      <rule id="Rule_Init_Phys_Reassign">
+        <inputEntry id="UE_Init2_Phys"><text>"Physician"</text></inputEntry>
+        <inputEntry id="UE_Init2_Act"><text>"Initial Enrollment"</text></inputEntry>
+        <inputEntry id="UE_Init2_Adverse"><text>true</text></inputEntry>
+        <inputEntry id="UE_Init2_Sole"><text>false</text></inputEntry>
+        <inputEntry id="UE_Init2_Reassign"><text>true</text></inputEntry>
+        <outputEntry id="OE_Init2_Docs"><text>"CMS-460,MedicalLicense,BoardCert,AdverseActionDocs"</text></outputEntry>
+        <outputEntry id="OE_Init2_Sections"><text>"1A,2A,2D1,3,4B,4C,4E,4F,12,13,15"</text></outputEntry>
+        <outputEntry id="OE_Init2_Notes"><text>"Physician initial enrollment, reassigning all benefits to group. Skip Section 4A (private practice). CMS-588 not required if reassigning all payments."</text></outputEntry>
+      </rule>
+
+      <!-- Initial Enrollment - Physician - Not Reassigning -->
+      <rule id="Rule_Init_Phys_NoReassign">
+        <inputEntry id="UE_Init3_Phys"><text>"Physician"</text></inputEntry>
+        <inputEntry id="UE_Init3_Act"><text>"Initial Enrollment"</text></inputEntry>
+        <inputEntry id="UE_Init3_Adverse"><text>true</text></inputEntry>
+        <inputEntry id="UE_Init3_Sole"><text>false</text></inputEntry>
+        <inputEntry id="UE_Init3_Reassign"><text>false</text></inputEntry>
+        <outputEntry id="OE_Init3_Docs"><text>"CMS-460,CMS-588,MedicalLicense,BoardCert,AdverseActionDocs,VoidedCheck,EFT"</text></outputEntry>
+        <outputEntry id="OE_Init3_Sections"><text>"1A,2A,2D1,3,4A,4B,4C,4D,4E,4F,4G,8,12,13,15"</text></outputEntry>
+        <outputEntry id="OE_Init3_Notes"><text>"Physician initial enrollment, private practice, not reassigning. Full business information required including EFT setup."</text></outputEntry>
+      </rule>
+
+      <!-- Initial Enrollment - NPP - Sole Owner - Reassigning -->
+      <rule id="Rule_Init_NPP_Sole_Reassign">
+        <inputEntry id="UE_Init4_NPP"><text>"NPP"</text></inputEntry>
+        <inputEntry id="UE_Init4_Act"><text>"Initial Enrollment"</text></inputEntry>
+        <inputEntry id="UE_Init4_Adverse"><text>true</text></inputEntry>
+        <inputEntry id="UE_Init4_Sole"><text>true</text></inputEntry>
+        <inputEntry id="UE_Init4_Reassign"><text>true</text></inputEntry>
+        <outputEntry id="OE_Init4_Docs"><text>"CMS-460,CMS-588,IRS-CP575,MedicalLicense,NationalCert,EducationProof,AdverseActionDocs,VoidedCheck,EFT"</text></outputEntry>
+        <outputEntry id="OE_Init4_Sections"><text>"1A,2A,2D2,2H,3,4A,4B,4C,4E,4F,8,12,13,15"</text></outputEntry>
+        <outputEntry id="OE_Init4_Notes"><text>"NPP initial enrollment with reassignment. Must include national certification and educational proof. Separate 855I required per non-physician specialty type."</text></outputEntry>
+      </rule>
+
+      <!-- Initial Enrollment - NPP - Not Reassigning -->
+      <rule id="Rule_Init_NPP_NoReassign">
+        <inputEntry id="UE_Init5_NPP"><text>"NPP"</text></inputEntry>
+        <inputEntry id="UE_Init5_Act"><text>"Initial Enrollment"</text></inputEntry>
+        <inputEntry id="UE_Init5_Adverse"><text>true</text></inputEntry>
+        <inputEntry id="UE_Init5_Sole"><text>false</text></inputEntry>
+        <inputEntry id="UE_Init5_Reassign"><text>false</text></inputEntry>
+        <outputEntry id="OE_Init5_Docs"><text>"CMS-460,CMS-588,MedicalLicense,NationalCert,EducationProof,AdverseActionDocs,VoidedCheck,EFT"</text></outputEntry>
+        <outputEntry id="OE_Init5_Sections"><text>"1A,2A,2D2,2H,3,4A,4B,4C,4D,4E,4F,4G,8,12,13,15"</text></outputEntry>
+        <outputEntry id="OE_Init5_Notes"><text>"NPP initial enrollment, private practice. National certification and education proof required. Check specialty-specific requirements."</text></outputEntry>
+      </rule>
+
+      <!-- Revalidation - Physician -->
+      <rule id="Rule_Reval_Phys">
+        <inputEntry id="UE_Reval_Phys"><text>"Physician"</text></inputEntry>
+        <inputEntry id="UE_Reval_Act"><text>"Revalidation"</text></inputEntry>
+        <inputEntry id="UE_Reval_Adverse"><text>true</text></inputEntry>
+        <inputEntry id="UE_Reval_Sole"><text>true</text></inputEntry>
+        <inputEntry id="UE_Reval_Reassign"><text>true</text></inputEntry>
+        <outputEntry id="OE_Reval_Docs"><text>"CMS-588(IfChangingBanking),IRS-CP575(IfSoleOwner),MedicalLicense,AdverseActionDocs(IfAny),RevalidationNotice"</text></outputEntry>
+        <outputEntry id="OE_Reval_Sections"><text>"1A,2A,2D1,3,4B,4C,4E,4F,12,13,15"</text></outputEntry>
+        <outputEntry id="OE_Reval_Notes"><text>"Physician revalidation. List ALL active reassignments in Section 4B. Every 5 years. Must list all PTANs in Section 1A."</text></outputEntry>
+      </rule>
+
+      <!-- Revalidation - NPP -->
+      <rule id="Rule_Reval_NPP">
+        <inputEntry id="UE_Reval2_NPP"><text>"NPP"</text></inputEntry>
+        <inputEntry id="UE_Reval2_Act"><text>"Revalidation"</text></inputEntry>
+        <inputEntry id="UE_Reval2_Adverse"><text>true</text></inputEntry>
+        <inputEntry id="UE_Reval2_Sole"><text>true</text></inputEntry>
+        <inputEntry id="UE_Reval2_Reassign"><text>true</text></inputEntry>
+        <outputEntry id="OE_Reval2_Docs"><text>"CMS-588(IfChangingBanking),IRS-CP575(IfSoleOwner),MedicalLicense,NationalCert,AdverseActionDocs(IfAny),RevalidationNotice"</text></outputEntry>
+        <outputEntry id="OE_Reval2_Sections"><text>"1A,2A,2D2,2H,3,4B,4C,4E,4F,12,13,15"</text></outputEntry>
+        <outputEntry id="OE_Reval2_Notes"><text>"NPP revalidation. List ALL active reassignments. Must list all PTANs. Every 5 years."</text></outputEntry>
+      </rule>
+
+      <!-- Change of Information -->
+      <rule id="Rule_ChangeInfo">
+        <inputEntry id="UE_Change_Phys"><text>"Physician"</text></inputEntry>
+        <inputEntry id="UE_Change_Act"><text>"Change of Information"</text></inputEntry>
+        <inputEntry id="UE_Change_Adverse"><text>true</text></inputEntry>
+        <inputEntry id="UE_Change_Sole"><text>true</text></inputEntry>
+        <inputEntry id="UE_Change_Reassign"><text>true</text></inputEntry>
+        <outputEntry id="OE_Change_Docs"><text>"AdverseActionDocs(IfApplicable),UpdatedLicense(IfChanged),IRS-CP575(IfBusinessChange)"</text></outputEntry>
+        <outputEntry id="OE_Change_Sections"><text>"1A,1B,2A,3,ApplicableChangedSection,15"</text></outputEntry>
+        <outputEntry id="OE_Change_Notes"><text>"Sections 1, 2A, 3, and 15 MUST always be completed. Report ownership/control changes within 30 days. All other changes within 90 days."</text></outputEntry>
+      </rule>
+
+      <!-- Reactivation -->
+      <rule id="Rule_Reactivate">
+        <inputEntry id="UE_React_Phys"><text>"Physician"</text></inputEntry>
+        <inputEntry id="UE_React_Act"><text>"Reactivation"</text></inputEntry>
+        <inputEntry id="UE_React_Adverse"><text>true</text></inputEntry>
+        <inputEntry id="UE_React_Sole"><text>true</text></inputEntry>
+        <inputEntry id="UE_React_Reassign"><text>true</text></inputEntry>
+        <outputEntry id="OE_React_Docs"><text>"CMS-460,CMS-588,MedicalLicense,BoardCert,AdverseActionDocs,VoidedCheck,EFT"</text></outputEntry>
+        <outputEntry id="OE_React_Sections"><text>"1A,2A,2D1,3,4A,4B,4C,4E,4F,8,12,13,15"</text></outputEntry>
+        <outputEntry id="OE_React_Notes"><text>"Reactivation treated same as initial enrollment. Complete all applicable sections. New supporting documentation required."</text></outputEntry>
+      </rule>
+
+      <!-- Voluntary Termination -->
+      <rule id="Rule_Terminate">
+        <inputEntry id="UE_Term_Phys"><text>"Physician"</text></inputEntry>
+        <inputEntry id="UE_Term_Act"><text>"Voluntary Termination"</text></inputEntry>
+        <inputEntry id="UE_Term_Adverse"><text>true</text></inputEntry>
+        <inputEntry id="UE_Term_Sole"><text>true</text></inputEntry>
+        <inputEntry id="UE_Term_Reassign"><text>true</text></inputEntry>
+        <outputEntry id="OE_Term_Docs"><text>"None"</text></outputEntry>
+        <outputEntry id="OE_Term_Sections"><text>"1A,2A,13(optional),15"</text></outputEntry>
+        <outputEntry id="OE_Term_Notes"><text>"Minimal sections required. Provide effective date of termination in Section 1A. Terminates all reassignments."</text></outputEntry>
+      </rule>
+
+      <!-- Default catch-all -->
+      <rule id="Rule_Default">
+        <inputEntry id="UE_Default_Provider"><text>true</text></inputEntry>
+        <inputEntry id="UE_Default_Action"><text>true</text></inputEntry>
+        <inputEntry id="UE_Default_Adverse"><text>true</text></inputEntry>
+        <inputEntry id="UE_Default_Sole"><text>true</text></inputEntry>
+        <inputEntry id="UE_Default_Reassign"><text>true</text></inputEntry>
+        <outputEntry id="OE_Default_Docs"><text>"CMS-460,MedicalLicense,BoardCert"</text></outputEntry>
+        <outputEntry id="OE_Default_Sections"><text>"1A,2A,3,15"</text></outputEntry>
+        <outputEntry id="OE_Default_Notes"><text>"Default: minimum required sections. Verify provider type and enrollment action for complete requirements."</text></outputEntry>
+      </rule>
+    </decisionTable>
+  </decision>
+
+  <!-- Decision 2: Determine site visit requirement -->
+  <decision id="site-visit-determination" name="Site Visit Determination">
+    <decisionTable id="DecisionTable_SiteVisit" hitPolicy="FIRST">
+      <input id="Input_SV_EnrollmentAction" label="Enrollment Action">
+        <inputExpression id="InputExpr_SV_Action" typeRef="string">
+          <text>enrollmentAction</text>
+        </inputExpression>
+      </input>
+      <input id="Input_SV_ProviderType" label="Provider Type">
+        <inputExpression id="InputExpr_SV_ProviderType" typeRef="string">
+          <text>providerType</text>
+        </inputExpression>
+      </input>
+      <input id="Input_SV_HasNewPracticeLocation" label="Has New Practice Location">
+        <inputExpression id="InputExpr_SV_NewLoc" typeRef="boolean">
+          <text>hasNewPracticeLocation</text>
+        </inputExpression>
+      </input>
+      <input id="Input_SV_IsSoleProprietor" label="Is Sole Proprietor">
+        <inputExpression id="InputExpr_SV_SoleProp" typeRef="boolean">
+          <text>isSoleProprietor</text>
+        </inputExpression>
+      </input>
+      <output id="Output_SV_Required" name="Site Visit Required" typeRef="boolean" />
+      <output id="Output_SV_Type" name="Site Visit Type" typeRef="string" />
+      <output id="Output_SV_EstimatedDays" name="Estimated Days" typeRef="number" />
+
+      <rule id="Rule_SV_Initial_NewLoc">
+        <inputEntry id="UE_SV1_Action"><text>"Initial Enrollment"</text></inputEntry>
+        <inputEntry id="UE_SV1_Provider"><text>true</text></inputEntry>
+        <inputEntry id="UE_SV1_NewLoc"><text>true</text></inputEntry>
+        <inputEntry id="UE_SV1_Sole"><text>true</text></inputEntry>
+        <outputEntry id="OE_SV1_Required"><text>true</text></outputEntry>
+        <outputEntry id="OE_SV1_Type"><text>"Initial Enrollment Site Visit"</text></outputEntry>
+        <outputEntry id="OE_SV1_Days"><text>45</text></outputEntry>
+      </rule>
+
+      <rule id="Rule_SV_Initial_NoNewLoc">
+        <inputEntry id="UE_SV2_Action"><text>"Initial Enrollment"</text></inputEntry>
+        <inputEntry id="UE_SV2_Provider"><text>true</text></inputEntry>
+        <inputEntry id="UE_SV2_NewLoc"><text>false</text></inputEntry>
+        <inputEntry id="UE_SV2_Sole"><text>true</text></inputEntry>
+        <outputEntry id="OE_SV2_Required"><text>false</text></outputEntry>
+        <outputEntry id="OE_SV2_Type"><text>"None"</text></outputEntry>
+        <outputEntry id="OE_SV2_Days"><text>0</text></outputEntry>
+      </rule>
+
+      <rule id="Rule_SV_Revalidation">
+        <inputEntry id="UE_SV3_Action"><text>"Revalidation"</text></inputEntry>
+        <inputEntry id="UE_SV3_Provider"><text>true</text></inputEntry>
+        <inputEntry id="UE_SV3_NewLoc"><text>true</text></inputEntry>
+        <inputEntry id="UE_SV3_Sole"><text>true</text></inputEntry>
+        <outputEntry id="OE_SV3_Required"><text>true</text></outputEntry>
+        <outputEntry id="OE_SV3_Type"><text>"Revalidation Site Visit"</text></outputEntry>
+        <outputEntry id="OE_SV3_Days"><text>45</text></outputEntry>
+      </rule>
+
+      <rule id="Rule_SV_ChangeOfInfo_NewLoc">
+        <inputEntry id="UE_SV4_Action"><text>"Change of Information"</text></inputEntry>
+        <inputEntry id="UE_SV4_Provider"><text>true</text></inputEntry>
+        <inputEntry id="UE_SV4_NewLoc"><text>true</text></inputEntry>
+        <inputEntry id="UE_SV4_Sole"><text>true</text></inputEntry>
+        <outputEntry id="OE_SV4_Required"><text>true</text></outputEntry>
+        <outputEntry id="OE_SV4_Type"><text>"Practice Location Site Visit"</text></outputEntry>
+        <outputEntry id="OE_SV4_Days"><text>45</text></outputEntry>
+      </rule>
+
+      <rule id="Rule_SV_Default">
+        <inputEntry id="UE_SV5_Action"><text>true</text></inputEntry>
+        <inputEntry id="UE_SV5_Provider"><text>true</text></inputEntry>
+        <inputEntry id="UE_SV5_NewLoc"><text>true</text></inputEntry>
+        <inputEntry id="UE_SV5_Sole"><text>true</text></inputEntry>
+        <outputEntry id="OE_SV5_Required"><text>false</text></outputEntry>
+        <outputEntry id="OE_SV5_Type"><text>"None"</text></outputEntry>
+        <outputEntry id="OE_SV5_Days"><text>0</text></outputEntry>
+      </rule>
+    </decisionTable>
+  </decision>
+
+  <!-- Decision 3: Determine processing timeline -->
+  <decision id="processing-timeline" name="Processing Timeline">
+    <decisionTable id="DecisionTable_Timeline" hitPolicy="FIRST">
+      <input id="Input_TL_SubmissionMethod" label="Submission Method">
+        <inputExpression id="InputExpr_TL_Method" typeRef="string">
+          <text>submissionMethod</text>
+        </inputExpression>
+      </input>
+      <input id="Input_TL_SiteVisitRequired" label="Site Visit Required">
+        <inputExpression id="InputExpr_TL_SV" typeRef="boolean">
+          <text>siteVisitRequired</text>
+        </inputExpression>
+      </input>
+      <input id="Input_TL_IsIncomplete" label="Application Incomplete">
+        <inputExpression id="InputExpr_TL_Incomplete" typeRef="boolean">
+          <text>applicationIncomplete</text>
+        </inputExpression>
+      </input>
+      <output id="Output_TL_Step1Days" name="Step 1 MAC Review Days" typeRef="number" />
+      <output id="Output_TL_Step2Days" name="Step 2 SA/AO Review Days" typeRef="number" />
+      <output id="Output_TL_Step3Days" name="Step 3 Site Visit Days" typeRef="number" />
+      <output id="Output_TL_Step4Days" name="Step 4 CMS Review Days" typeRef="number" />
+      <output id="Output_TL_Step5Days" name="Step 5 Approval Days" typeRef="number" />
+      <output id="Output_TL_TotalEstimate" name="Total Estimated Days" typeRef="number" />
+
+      <rule id="Rule_TL_Paper_WithSV">
+        <inputEntry id="UE_TL1_Method"><text>"Paper"</text></inputEntry>
+        <inputEntry id="UE_TL1_SV"><text>true</text></inputEntry>
+        <inputEntry id="UE_TL1_Incomplete"><text>false</text></inputEntry>
+        <outputEntry id="OE_TL1_S1"><text>65</text></outputEntry>
+        <outputEntry id="OE_TL1_S2"><text>45</text></outputEntry>
+        <outputEntry id="OE_TL1_S3"><text>45</text></outputEntry>
+        <outputEntry id="OE_TL1_S4"><text>30</text></outputEntry>
+        <outputEntry id="OE_TL1_S5"><text>10</text></outputEntry>
+        <outputEntry id="OE_TL1_Total"><text>195</text></outputEntry>
+      </rule>
+
+      <rule id="Rule_TL_Paper_NoSV">
+        <inputEntry id="UE_TL2_Method"><text>"Paper"</text></inputEntry>
+        <inputEntry id="UE_TL2_SV"><text>false</text></inputEntry>
+        <inputEntry id="UE_TL2_Incomplete"><text>false</text></inputEntry>
+        <outputEntry id="OE_TL2_S1"><text>65</text></outputEntry>
+        <outputEntry id="OE_TL2_S2"><text>45</text></outputEntry>
+        <outputEntry id="OE_TL2_S3"><text>0</text></outputEntry>
+        <outputEntry id="OE_TL2_S4"><text>30</text></outputEntry>
+        <outputEntry id="OE_TL2_S5"><text>10</text></outputEntry>
+        <outputEntry id="OE_TL2_Total"><text>150</text></outputEntry>
+      </rule>
+
+      <rule id="Rule_TL_Web_WithSV">
+        <inputEntry id="UE_TL3_Method"><text>"PECOS"</text></inputEntry>
+        <inputEntry id="UE_TL3_SV"><text>true</text></inputEntry>
+        <inputEntry id="UE_TL3_Incomplete"><text>false</text></inputEntry>
+        <outputEntry id="OE_TL3_S1"><text>30</text></outputEntry>
+        <outputEntry id="OE_TL3_S2"><text>45</text></outputEntry>
+        <outputEntry id="OE_TL3_S3"><text>45</text></outputEntry>
+        <outputEntry id="OE_TL3_S4"><text>30</text></outputEntry>
+        <outputEntry id="OE_TL3_S5"><text>10</text></outputEntry>
+        <outputEntry id="OE_TL3_Total"><text>160</text></outputEntry>
+      </rule>
+
+      <rule id="Rule_TL_Web_NoSV">
+        <inputEntry id="UE_TL4_Method"><text>"PECOS"</text></inputEntry>
+        <inputEntry id="UE_TL4_SV"><text>false</text></inputEntry>
+        <inputEntry id="UE_TL4_Incomplete"><text>false</text></inputEntry>
+        <outputEntry id="OE_TL4_S1"><text>30</text></outputEntry>
+        <outputEntry id="OE_TL4_S2"><text>45</text></outputEntry>
+        <outputEntry id="OE_TL4_S3"><text>0</text></outputEntry>
+        <outputEntry id="OE_TL4_S4"><text>30</text></outputEntry>
+        <outputEntry id="OE_TL4_S5"><text>10</text></outputEntry>
+        <outputEntry id="OE_TL4_Total"><text>115</text></outputEntry>
+      </rule>
+
+      <rule id="Rule_TL_Incomplete">
+        <inputEntry id="UE_TL5_Method"><text>true</text></inputEntry>
+        <inputEntry id="UE_TL5_SV"><text>true</text></inputEntry>
+        <inputEntry id="UE_TL5_Incomplete"><text>true</text></inputEntry>
+        <outputEntry id="OE_TL5_S1"><text>0</text></outputEntry>
+        <outputEntry id="OE_TL5_S2"><text>0</text></outputEntry>
+        <outputEntry id="OE_TL5_S3"><text>0</text></outputEntry>
+        <outputEntry id="OE_TL5_S4"><text>0</text></outputEntry>
+        <outputEntry id="OE_TL5_S5"><text>0</text></outputEntry>
+        <outputEntry id="OE_TL5_Total"><text>0</text></outputEntry>
+      </rule>
+    </decisionTable>
+  </decision>
+
+  <dmndi:DMNDI>
+    <dmndi:DMNDiagram>
+      <dmndi:DMNShape id="Decision_RequiredDocs_di" dmnElementRef="required-documentation">
+        <dc:Bounds height="80" width="180" x="100" y="100" />
+      </dmndi:DMNShape>
+      <dmndi:DMNShape id="Decision_SiteVisit_di" dmnElementRef="site-visit-determination">
+        <dc:Bounds height="80" width="180" x="400" y="100" />
+      </dmndi:DMNShape>
+      <dmndi:DMNShape id="Decision_Timeline_di" dmnElementRef="processing-timeline">
+        <dc:Bounds height="80" width="180" x="700" y="100" />
+      </dmndi:DMNShape>
+    </dmndi:DMNDiagram>
+  </dmndi:DMNDI>
+</definitions>
