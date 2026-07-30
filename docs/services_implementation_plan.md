@@ -5,7 +5,7 @@
 | Step | Command / Action | Purpose |
 |------|------------------|---------|
 | 1 | `mkdir -p services && cd services` | Create a dedicated services root.
-| 2 | `go mod init github.com/yourorg/provider-enroll-demo` | Initialize a Go module for reproducible builds.
+| 2 | `go mod init github.com/asptom/pe-workflow` | Initialize a Go module for reproducible builds.
 | 3 | `go get github.com/go-chi/chi/v5` | Pull a minimal HTTP router.
 | 4 | `go get github.com/rs/zerolog` | Add structured logging.
 | 5 | `mkdir k8s` | Prepare Kubernetes manifests folder.
@@ -108,7 +108,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: <service-name>
-  namespace: provider-enroll-demo
+  namespace: pe-workflow
 spec:
   replicas: 1
   selector:
@@ -121,7 +121,7 @@ spec:
     spec:
       containers:
       - name: <service-name>
-        image: <image-registry>/provider-enroll-demo/<service-name>:latest
+        image: <image-registry>/pe-workflow/<service-name>:latest
         ports:
         - containerPort: 8080
 ```
@@ -132,7 +132,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: <service-name>
-  namespace: provider-enroll-demo
+  namespace: pe-workflow
 spec:
   selector:
     app: <service-name>
@@ -156,9 +156,9 @@ spec:
 ## 5. BPMN Integration
 
 1. Identify each BPMN file that must call an external task:
-   * `shared/Shared_OIG_Screening.bpmn` → `verify_npi_tin`
-   * `Enrollment_Orchestrator.bpmn` → `check_eligibility`
-   * Delegate BPMNs (`Delegate_855I.bpmn`, `Delegate_855A.bpmn`, `Delegate_855B.bpmn`) → `generate_doc` and `schedule_visit` as appropriate.
+   * `workflows/855x-combined/shared/Shared_OIG_Screening.bpmn` → `verify_npi_tin`
+   * `workflows/855x-combined/Enrollment_Orchestrator.bpmn` → `check_eligibility`
+   * Delegate BPMNs (`workflows/855x-combined/delegates/Delegate_855I.bpmn`, `workflows/855x-combined/delegates/Delegate_855A.bpmn`, `workflows/855x-combined/delegates/Delegate_855B.bpmn`) → `generate_doc` and `schedule_visit` as appropriate.
    * Any tasks requiring stakeholder emails → `send_notification`.
 2. For each target, add an **External Task** element:
    * Set the **Topic** to the snake_case name.
@@ -171,7 +171,7 @@ spec:
    Ensure no validation errors and that the external‑task elements are correctly referenced.
 4. Deploy updated BPMNs:
    ```bash
-   c8ctl deploy shared/ delegated/ Enrollment_Orchestrator.bpmn
+   c8ctl deploy workflows/855x-combined/shared/ workflows/855x-combined/delegates/ workflows/855x-combined/Enrollment_Orchestrator.bpmn
    ```
 5. Start a test instance:
    ```bash
@@ -194,22 +194,22 @@ spec:
 
 1. **Namespace creation**:
    ```bash
-   kubectl create namespace provider-enroll-demo
+   kubectl create namespace pe-workflow
    ```
 2. **Build & push images** (replace `<registry>` with your container registry):
    ```bash
-   docker build -t <registry>/provider-enroll-demo/npi-verification:latest services/npi-verification
-   docker push <registry>/provider-enroll-demo/npi-verification:latest
+   docker build -t <registry>/pe-workflow/npi-verification:latest services/npi-verification
+   docker push <registry>/pe-workflow/npi-verification:latest
    ```
    Repeat for all services and workers.
 3. **Apply Kubernetes manifests** (in any order, services first, then workers):
    ```bash
-   kubectl apply -f services/npi-verification/k8s -n provider-enroll-demo
-   kubectl apply -f services/npi-verification/worker/k8s -n provider-enroll-demo
+   kubectl apply -f services/npi-verification/k8s -n pe-workflow
+   kubectl apply -f services/npi-verification/worker/k8s -n pe-workflow
    ```
 4. **Verify Pods**:
    ```bash
-   kubectl get pods -n provider-enroll-demo
+   kubectl get pods -n pe-workflow
    ```
    All should be `Running`.
 
@@ -236,7 +236,7 @@ spec:
 
 * All services expose only a `ClusterIP` service; no NodePort or LoadBalancer is configured.
 * Docker tags are set to `latest` for simplicity during prototyping.
-* The namespace `provider-enroll-demo` isolates these prototypes from any existing workloads.
+* The namespace `pe-workflow` isolates these prototypes from any existing workloads.
 * When ready to add persistence, each service can add a `state` package that talks to a shared PostgreSQL instance.
 
 ---
