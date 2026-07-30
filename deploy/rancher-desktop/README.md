@@ -20,10 +20,10 @@ entire `rancher-desktop/` directory to any project and it will work standalone.
 
 ```bash
 # 1. Deploy everything (operators + Camunda + c8ctl config)
-./procedure/camunda-deploy-no-domain.sh
+./scripts/camunda-deploy-no-domain.sh
 
 # 2. Start port-forwards in a separate terminal
-./procedure/camunda-port-forwards.sh
+./scripts/camunda-port-forwards.sh
 
 # 3. Use c8ctl (with port-forwards running)
 c8ctl get topology --profile=rancher-desktop
@@ -114,7 +114,7 @@ c8ctl watch --profile=rancher-desktop
 If you need to reconfigure c8ctl outside the deployment script:
 
 ```bash
-./procedure/configure-c8ctl.sh --namespace camunda --release-name camunda
+./scripts/configure-c8ctl.sh --namespace camunda --release-name camunda
 ```
 
 ### Retrieving c8ctl Credentials
