@@ -21,7 +21,7 @@ set -euo pipefail
 #   - kubectl connected to the cluster
 #   - curl and jq installed
 #
-# The script starts a temporary Keycloak port-forward in the
+# The script starts temporary Keycloak and Zeebe gateway port-forwards in the
 # background, performs the configuration, then cleans up.
 #
 # Usage:
@@ -68,9 +68,10 @@ while [[ $# -gt 0 ]]; do
     --help|-h)
       echo "Usage: $0 [--namespace camunda] [--release-name camunda] [--keycloak-port 18080] [--zeebe-port 8080] [--profile-name rancher-desktop]"
       echo ""
-      echo "This script starts a temporary Keycloak port-forward, creates an OIDC"
-      echo "client for c8ctl, stores credentials in a Kubernetes secret, and"
-      echo "registers a c8ctl profile. The port-forward is cleaned up on exit."
+      echo "This script starts temporary Keycloak and Zeebe gateway port-forwards, creates an OIDC"
+      echo "client for c8ctl, stores credentials in a Kubernetes secret, registers a c8ctl profile,"
+      echo "and creates the Zeebe authorizations the client needs. The port-forwards are cleaned up"
+      echo "on exit."
       echo ""
       echo "Prerequisites:"
       echo "  - Keycloak and Zeebe must be deployed and running in the cluster"
@@ -115,6 +116,22 @@ if ! command -v jq &>/dev/null; then
   echo "ERROR: jq is not installed."
   exit 1
 fi
+
+# ---- Wait for the Zeebe gateway to be ready ----
+# On a fresh deployment this script races ahead of the cluster: Identity (a
+# separate pod) creates the realm before the Zeebe broker StatefulSet is Ready,
+# so the camunda-zeebe-gateway service has no endpoint yet and kubectl
+# port-forward to it would exit immediately. Wait for the StatefulSet rollout
+# before forwarding.
+wait_for_zeebe_ready() {
+  echo "Waiting for Zeebe gateway (StatefulSet '${RELEASE_NAME}-zeebe') to be Ready..."
+  if kubectl rollout status "statefulset/${RELEASE_NAME}-zeebe" -n "$NAMESPACE" --timeout=300s >/dev/null 2>&1; then
+    echo "Zeebe gateway is Ready."
+    return 0
+  fi
+  echo "WARNING: Zeebe gateway StatefulSet did not become Ready within 5 minutes."
+  return 1
+}
 
 # ---- Start temporary Keycloak port-forward ----
 echo "Starting temporary Keycloak port-forward..."
@@ -423,7 +440,7 @@ c8ctl use profile "$C8CTL_PROFILE_NAME" 2>/dev/null || true
 echo ""
 echo "Creating authorizations for '${OIDC_CLIENT_ID}' client via Orchestration Admin API..."
 
-# Start temporary port-forward for the Zeebe gateway REST API
+# Start temporary port-forward for the Zeebe gateway REST API.
 ADMIN_PF_PID=""
 cleanup_admin_pf() {
   if [ -n "$ADMIN_PF_PID" ]; then
@@ -433,25 +450,41 @@ cleanup_admin_pf() {
 }
 trap cleanup_admin_pf RETURN
 
-kubectl port-forward "svc/${RELEASE_NAME}-zeebe-gateway" -n "$NAMESPACE" "${ZEEBE_PORT}:8080" >/dev/null 2>&1 &
-ADMIN_PF_PID=$!
-
-# Wait until the gateway responds. Any HTTP status (401 included) proves the
-# port-forward is up and the REST API is reachable — the old /ready check was
-# useless because /ready returns 404.
 GW_READY=false
-for _ in $(seq 1 20); do
-  if ! kill -0 "$ADMIN_PF_PID" 2>/dev/null; then
-    echo "ERROR: Zeebe gateway port-forward exited unexpectedly."
-    break
-  fi
-  GW_CODE="$(curl -s -o /dev/null -w "%{http_code}" --max-time 3 "http://localhost:${ZEEBE_PORT}/v2/topology" 2>/dev/null || true)"
-  if [ -n "$GW_CODE" ] && [ "$GW_CODE" != "000" ]; then
-    GW_READY=true
-    break
-  fi
-  sleep 1
-done
+# The gateway service has no endpoint until the Zeebe StatefulSet is Ready, so
+# port-forward would exit immediately on a fresh deployment. Wait for it first.
+if wait_for_zeebe_ready; then
+  start_gateway_pf() {
+    kubectl port-forward "svc/${RELEASE_NAME}-zeebe-gateway" -n "$NAMESPACE" "${ZEEBE_PORT}:8080" >/dev/null 2>&1 &
+    ADMIN_PF_PID=$!
+  }
+  start_gateway_pf
+
+  # The forward can still die if the pod restarts while starting up, so restart
+  # it a few times instead of giving up on the first exit. Any HTTP status (401
+  # included) proves the forward is up and the REST API is reachable — the old
+  # /ready check was useless because /ready returns 404.
+  PF_RESTARTS=0
+  for _ in $(seq 1 30); do
+    if ! kill -0 "$ADMIN_PF_PID" 2>/dev/null; then
+      if [ "$PF_RESTARTS" -lt 3 ]; then
+        PF_RESTARTS=$((PF_RESTARTS + 1))
+        echo "  Restarting Zeebe gateway port-forward..."
+        sleep 2
+        start_gateway_pf
+        continue
+      fi
+      echo "ERROR: Zeebe gateway port-forward keeps exiting."
+      break
+    fi
+    GW_CODE="$(curl -s -o /dev/null -w "%{http_code}" --max-time 3 "http://localhost:${ZEEBE_PORT}/v2/topology" 2>/dev/null || true)"
+    if [ -n "$GW_CODE" ] && [ "$GW_CODE" != "000" ]; then
+      GW_READY=true
+      break
+    fi
+    sleep 1
+  done
+fi
 
 if [ "$GW_READY" != "true" ]; then
   echo "WARNING: Zeebe gateway is not reachable on localhost:${ZEEBE_PORT}."
@@ -562,26 +595,54 @@ echo ""
 echo "Verifying c8ctl profile..."
 
 # Start both port-forwards temporarily for verification
-VERIFY_PIDS=()
+VERIFY_KC_PID=""
+VERIFY_GW_PID=""
 cleanup_verify() {
-  for pid in "${VERIFY_PIDS[@]}"; do
-    kill "$pid" 2>/dev/null || true
+  for pid in "$VERIFY_KC_PID" "$VERIFY_GW_PID"; do
+    [ -n "$pid" ] && kill "$pid" 2>/dev/null || true
   done
 }
 trap 'cleanup_verify' RETURN
 
-kubectl port-forward "svc/keycloak-service" -n "$NAMESPACE" "${KEYCLOAK_PORT}:18080" >/dev/null 2>&1 &
-VERIFY_PIDS+=($!)
-kubectl port-forward "svc/${RELEASE_NAME}-zeebe-gateway" -n "$NAMESPACE" "${ZEEBE_PORT}:8080" >/dev/null 2>&1 &
-VERIFY_PIDS+=($!)
+start_verify_kc() {
+  kubectl port-forward "svc/keycloak-service" -n "$NAMESPACE" "${KEYCLOAK_PORT}:18080" >/dev/null 2>&1 &
+  VERIFY_KC_PID=$!
+}
+start_verify_gw() {
+  kubectl port-forward "svc/${RELEASE_NAME}-zeebe-gateway" -n "$NAMESPACE" "${ZEEBE_PORT}:8080" >/dev/null 2>&1 &
+  VERIFY_GW_PID=$!
+}
 
-# Wait for port-forwards to be ready (Keycloak and the Zeebe gateway)
+# Best-effort wait for the Zeebe gateway so the forward does not die (see the
+# authorization step above). If it still is not ready, we simply report a
+# warning at the end.
+wait_for_zeebe_ready || true
+
+start_verify_kc
+start_verify_gw
+
+# Wait for port-forwards to be ready (Keycloak and the Zeebe gateway),
+# restarting either forward if its pod is still warming up.
 sleep 3
-for _ in $(seq 1 15); do
+GW_RESTARTS=0
+KC_RESTARTS=0
+for _ in $(seq 1 20); do
   KC_CODE="$(curl -s -o /dev/null -w "%{http_code}" --max-time 3 "http://localhost:${KEYCLOAK_PORT}/auth/realms/master" 2>/dev/null || true)"
   GW_CODE="$(curl -s -o /dev/null -w "%{http_code}" --max-time 3 "http://localhost:${ZEEBE_PORT}/v2/topology" 2>/dev/null || true)"
   if [ "$KC_CODE" != "000" ] && [ -n "$KC_CODE" ] && [ "$GW_CODE" != "000" ] && [ -n "$GW_CODE" ]; then
     break
+  fi
+  if ! kill -0 "$VERIFY_GW_PID" 2>/dev/null && [ "$GW_RESTARTS" -lt 3 ]; then
+    GW_RESTARTS=$((GW_RESTARTS + 1))
+    echo "  Restarting Zeebe gateway port-forward..."
+    start_verify_gw
+    sleep 2
+  fi
+  if ! kill -0 "$VERIFY_KC_PID" 2>/dev/null && [ "$KC_RESTARTS" -lt 3 ]; then
+    KC_RESTARTS=$((KC_RESTARTS + 1))
+    echo "  Restarting Keycloak port-forward..."
+    start_verify_kc
+    sleep 2
   fi
   sleep 1
 done
