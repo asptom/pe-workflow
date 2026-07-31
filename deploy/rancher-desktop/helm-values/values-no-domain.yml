@@ -11,7 +11,7 @@
 # - Elasticsearch via ECK operator
 # - Keycloak via Keycloak operator (with keycloak-instance-no-domain.yml)
 #
-# Used in combination with operator-based values from generic/kubernetes/operator-based/:
+# Used in combination with operator-based values from the upstream generic/kubernetes/operator-based/ template (included under manifests/):
 # - camunda-elastic-values.yml (Elasticsearch via ECK)
 # - camunda-keycloak-no-domain-values.yml (Keycloak via operator, no-domain mode)
 # - camunda-identity-values.yml (PostgreSQL for Identity via CloudNativePG)
@@ -29,7 +29,7 @@ global:
                     existingSecretKey: identity-admin-client-token
 
             identity:
-                redirectUrl: http://localhost:8085
+                redirectUrl: http://localhost:8080/identity
 
             optimize:
                 redirectUrl: http://localhost:8083
@@ -66,7 +66,7 @@ connectors:
 
 identity:
     enabled: true
-    fullURL: http://localhost:8085
+    fullURL: http://localhost:8080/identity
     resources:
         requests:
             cpu: 50m

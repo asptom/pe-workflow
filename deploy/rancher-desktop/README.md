@@ -3,8 +3,9 @@
 Self-contained reference for deploying Camunda 8 Self-Managed to Rancher Desktop's
 local k3s Kubernetes cluster using port-forwarding (no ingress, no domain).
 
-This folder is **fully self-contained** — all manifests and Helm values needed for
-deployment are included under `manifests/` and `helm-values/`. You can copy this
+This folder is self-contained — all manifests and Helm values needed for deployment
+are included under `manifests/` and `helm-values/` (the `manifests/` files are copied
+from the upstream `generic/kubernetes/operator-based/` template). You can copy this
 entire `rancher-desktop/` directory to any project and it will work standalone.
 
 ## Prerequisites
@@ -40,7 +41,7 @@ c8ctl list pd --profile=rancher-desktop
 | 4 | Keycloak instance | Keycloak Operator |
 | 5 | Identity secrets (`camunda-credentials`) | — |
 | 6 | Camunda Platform (Zeebe, Operate, Tasklist, Optimize, Console, Web Modeler, Connectors) | Helm chart `camunda-platform` |
-| 7 | OIDC client + c8ctl profile | Keycloak Admin API + c8ctl |
+| 7 | OIDC client + c8ctl profile + Zeebe authorizations | Keycloak Admin API + c8ctl |
 
 ## Directory Structure
 
@@ -49,7 +50,7 @@ rancher-desktop/
 ├── README.md                          # This file
 ├── helm-values/
 │   └── values-no-domain.yml           # Camunda Helm values (no-domain/port-forward mode)
-├── manifests/                         # Copied from generic/kubernetes/operator-based/
+├── manifests/                         # Copied from upstream generic/kubernetes/operator-based/ template
 │   ├── elasticsearch/
 │   │   ├── elasticsearch-cluster.yml         # ES cluster CR
 │   │   └── camunda-elastic-values.yml         # ES Helm values for Camunda
@@ -61,11 +62,11 @@ rancher-desktop/
 │   └── keycloak/
 │       ├── keycloak-instance-no-domain.yml   # Keycloak CR
 │       └── camunda-keycloak-no-domain-values.yml  # Keycloak Helm values
-└── procedure/
+└── scripts/
     ├── camunda-deploy-no-domain.sh   # Main deployment script (Steps 1-7)
-    ├── configure-c8ctl.sh            # c8ctl profile setup (Step 7)
+    ├── configure-c8ctl.sh            # c8ctl profile + Zeebe authorizations (Step 7)
     ├── camunda-port-forwards.sh      # Port-forwarding helper
-    └── camunda-uninstall.sh          # Full cleanup script
+    └── camunda-uninstall.sh          # Cleanup script (see Cleanup section)
 ```
 
 ## Environment Variables
@@ -90,6 +91,9 @@ Step 7 of the deployment script automatically configures c8ctl:
 3. **Stores credentials** in a Kubernetes secret `c8ctl-credentials` in the `camunda` namespace.
 4. **Creates a c8ctl profile** named `rancher-desktop` pointing at `http://localhost:8080/v2`
    with the Keycloak OAuth token endpoint and `orchestration` audience.
+5. **Creates Zeebe authorizations** for the `zeebe-cli` client (RESOURCE, PROCESS_DEFINITION,
+   DECISION_DEFINITION, DECISION_REQUIREMENTS_DEFINITION, USER_TASK, BATCH) so it can deploy,
+   run, and inspect process instances.
 
 ### Using c8ctl
 
@@ -158,7 +162,9 @@ kubectl get secret keycloak-initial-admin -n camunda \
 ## Cleanup
 
 ```bash
-./procedure/camunda-uninstall.sh
+./scripts/camunda-uninstall.sh
 ```
 
-This removes the `camunda`, `elastic-system`, and `cnpg-system` namespaces.
+The script deletes the `camunda`, `elastic-system`, and `cnpg-system` namespaces. It does
+not uninstall the Helm releases or the ECK, CloudNativePG, and Keycloak operators — their
+cluster-scoped CRDs remain.

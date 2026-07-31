@@ -8,9 +8,9 @@ running in k3s provided by Rancher Desktop on macOS.
 - **DMN** When creating, updating, or debugging DMN decision tables, load and leverage the camunda-dmn skill    
 - **Form** When creating, updating, or debugging forms, load and leverage the camunda-form skill  
 - **FEEL** When you need to write, debug, evaluate, and validate FEEL (Friendly Enough Expression Language) expressions for Camunda, load and leverage the camunda-feel skill  
-- **c8ctl** When you need to to install, configure, and operate c8ctl (the Camunda 8 CLI), load and leverage the camunda-c8ctl skill  
+- **c8ctl** When you need to install, configure, and operate c8ctl (the Camunda 8 CLI), load and leverage the camunda-c8ctl skill  
 - **Process Management** When you need to deploy BPMN, DMN, and form resources to a Camunda 8 cluster and operate live processes via c8ctl, load and leverage the camunda-process-mgmt skill  
-- **Job Workers** When you need to to implement Camunda 8 job workers in Java, Camunda Spring Boot, or TypeScript — handler code that activates jobs from a service task, runs business logic, and completes, fails, or throws a BPMN error, load and leverage the camunda-job-workers skill  
+- **Job Workers** When you need to implement Camunda 8 job workers in Java, Camunda Spring Boot, or TypeScript — handler code that activates jobs from a service task, runs business logic, and completes, fails, or throws a BPMN error, load and leverage the camunda-job-workers skill  
 
 ## Delegation Protocol (MANDATORY)
 

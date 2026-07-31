@@ -9,8 +9,13 @@ This document covers uploading and deploying the enrollment workflow artifacts t
 | Requirement | Check |
 |---|---|
 | `c8ctl` CLI installed | `c8ctl --version` |
-| Camunda 8 cluster running | `c8ctl get topology` |
-| Correct profile active | `c8ctl which profile` |
+| Camunda 8 cluster running | `c8ctl get topology --profile=rancher-desktop` |
+| Correct profile active | `c8ctl which profile` (should be `rancher-desktop`) |
+
+This guide targets the local Rancher Desktop k3s deployment in this repo. Before
+running c8ctl commands, start the port-forwards (`./scripts/camunda-port-forwards.sh`
+from `deploy/rancher-desktop/`) and use the `rancher-desktop` profile. See
+`deploy/rancher-desktop/README.md` for details.
 
 ---
 
@@ -55,7 +60,15 @@ This document covers uploading and deploying the enrollment workflow artifacts t
 |---|---|
 | `workflows/855x-combined/Enrollment_Orchestrator.bpmn` | Top-level process managing the full enrollment lifecycle |
 
-**Total: 14 deployable artifacts**
+### Standalone 855I Reference (3)
+
+| File | Purpose |
+|---|---|
+| `workflows/855i-single/cms855i-enrollment.bpmn` | Standalone single-delegate 855I process (id `cms855i-mac-enrollment`) |
+| `workflows/855i-single/cms855i-enrollment.dmn` | Three decisions: `required-documentation`, `site-visit-determination`, `processing-timeline` |
+| `workflows/855i-single/cms855i-start-form.form` | Start form for the standalone 855I process |
+
+**Total: 17 deployable artifacts**
 
 ---
 
@@ -68,10 +81,11 @@ Artifacts have dependencies. Forms and DMN decisions must be deployed before BPM
 `c8ctl deploy` auto-discovers all deployable files (`.bpmn`, `.dmn`, `.form`) in a directory tree:
 
 ```bash
-c8ctl deploy .
+c8ctl deploy . --profile=rancher-desktop
 ```
 
-This deploys all 14 artifacts in a single request. Camunda resolves dependencies internally.
+This deploys all 17 artifacts (the 14 `855x-combined` artifacts plus the three standalone
+`855i-single` files) in a single request. Camunda resolves dependencies internally.
 
 ### Option B: Step-by-Step Deploy
 
@@ -80,25 +94,25 @@ Deploy in dependency order if you need granular control:
 **Step 1 — Forms and DMN (no dependencies)**
 
 ```bash
-c8ctl deploy workflows/855x-combined/forms/ workflows/855x-combined/decisions/
+c8ctl deploy workflows/855x-combined/forms/ workflows/855x-combined/decisions/ --profile=rancher-desktop
 ```
 
 **Step 2 — Shared services (reference forms/DMN)**
 
 ```bash
-c8ctl deploy workflows/855x-combined/shared/
+c8ctl deploy workflows/855x-combined/shared/ --profile=rancher-desktop
 ```
 
 **Step 3 — Delegates (reference shared services)**
 
 ```bash
-c8ctl deploy workflows/855x-combined/delegates/
+c8ctl deploy workflows/855x-combined/delegates/ --profile=rancher-desktop
 ```
 
 **Step 4 — Orchestrator (references everything)**
 
 ```bash
-c8ctl deploy workflows/855x-combined/Enrollment_Orchestrator.bpmn
+c8ctl deploy workflows/855x-combined/Enrollment_Orchestrator.bpmn --profile=rancher-desktop
 ```
 
 ---
@@ -110,7 +124,7 @@ After deployment, verify all artifacts are registered:
 ### Check Process Definitions
 
 ```bash
-c8ctl list pd
+c8ctl list pd --profile=rancher-desktop
 ```
 
 Expected process definitions:
@@ -122,25 +136,26 @@ Expected process definitions:
 - `Shared_OIG_Screening`
 - `Shared_SA_Referral`
 - `Error_Handling`
+- `cms855i-mac-enrollment` (only if the standalone `855i-single` files are deployed)
 
 ### Search for Enrollment Processes
 
 ```bash
-c8ctl search pd --iname='*enrollment*'
-c8ctl search pd --iname='*delegate*'
+c8ctl search pd --iname='*enrollment*' --profile=rancher-desktop
+c8ctl search pd --iname='*delegate*' --profile=rancher-desktop
 ```
 
 ### Visual Verification
 
 ```bash
-c8ctl open operate    # View process definitions and instances
-c8ctl open tasklist   # Verify forms render on user tasks
+c8ctl open operate --profile=rancher-desktop    # View process definitions and instances
+c8ctl open tasklist --profile=rancher-desktop   # Verify forms render on user tasks
 ```
 
 ### Test a Process Instance
 
 ```bash
-c8ctl run Enrollment_Orchestrator.bpmn
+c8ctl run Enrollment_Orchestrator.bpmn --profile=rancher-desktop
 ```
 
 This deploys (if not already) and starts a new instance. Use Operate to trace execution.
@@ -151,8 +166,8 @@ This deploys (if not already) and starts a new instance. Use Operate to trace ex
 
 | Issue | Solution |
 |---|---|
-| `Connection refused` | Start the cluster: `c8ctl cluster start` |
-| `Process not found` | Check profile: `c8ctl which profile`. Deploy with `--profile` if needed |
-| `Form not found` on user task | Forms must be deployed before BPMN. Redeploy `forms/` first |
-| `Decision not found` on business rule task | DMN must be deployed before BPMN. Redeploy `decisions/` first |
+| `Connection refused` | Start the port-forwards: `./scripts/camunda-port-forwards.sh` (Rancher Desktop k3s must be running). This deployment does not use `c8ctl cluster start` |
+| `Process not found` | Check profile: `c8ctl which profile` — it must be `rancher-desktop`. Add `--profile=rancher-desktop` if needed |
+| `Form not found` on user task | Forms must be deployed before BPMN. Redeploy `workflows/855x-combined/forms/` first |
+| `Decision not found` on business rule task | DMN must be deployed before BPMN. Redeploy `workflows/855x-combined/decisions/` first |
 | `no-implicit-start` lint error | Missing sequence flow on a task. Run `c8ctl bpmn lint <file>` to identify |

@@ -188,7 +188,7 @@ spec:
    * On success, complete the task and return the response JSON as the external task variables.
    * On failure, report a failure and let Camunda retry according to the retries config.
 2. Package the worker as a separate Go binary (or embed it in the service binary if preferred).
-3. Deploy the worker as a Kubernetes Deployment in the same namespace, exposing the Zeebe gateway address via `ZEBE_GATEWAY` env var.
+3. Deploy the worker as a Kubernetes Deployment in the same namespace, exposing the Zeebe gateway address via `ZEEBE_GATEWAY` env var.
 
 ## 7. Deployment Flow
 

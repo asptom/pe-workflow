@@ -8,3 +8,6 @@ env_exports.sh
 # Temporary files
 *.tmp
 *.bak
+
+# macOS
+.DS_Store

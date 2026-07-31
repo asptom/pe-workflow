@@ -1,15 +1,18 @@
 #!/bin/bash
 
+# Namespace of the Camunda deployment (override with CAMUNDA_NAMESPACE)
+CAMUNDA_NAMESPACE="${CAMUNDA_NAMESPACE:-camunda}"
+
 # Array of target resources and port mappings
 # Format: "resource local_port:remote_port"
 FORWARDS=(
-  "svc/keycloak-service -n camunda 18080:18080"
-  "svc/camunda-zeebe-gateway -n camunda 8080:8080"
-  "svc/camunda-optimize -n camunda 8083:80"
-  "svc/camunda-web-modeler-restapi -n camunda 8070:80"
-  "svc/camunda-web-modeler-websockets -n camunda 8085:80"
-  "svc/camunda-console -n camunda 8087:80"
-  "svc/camunda-connectors -n camunda 8086:8080"
+  "svc/keycloak-service -n $CAMUNDA_NAMESPACE 18080:18080"
+  "svc/camunda-zeebe-gateway -n $CAMUNDA_NAMESPACE 8080:8080"
+  "svc/camunda-optimize -n $CAMUNDA_NAMESPACE 8083:80"
+  "svc/camunda-web-modeler-restapi -n $CAMUNDA_NAMESPACE 8070:80"
+  "svc/camunda-web-modeler-websockets -n $CAMUNDA_NAMESPACE 8085:80"
+  "svc/camunda-console -n $CAMUNDA_NAMESPACE 8087:80"
+  "svc/camunda-connectors -n $CAMUNDA_NAMESPACE 8086:8080"
 )
 
 # Array to store background process IDs
