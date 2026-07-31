@@ -11,6 +11,9 @@ set -euo pipefail
 #   2. Sets the client secret and reads it from the Keycloak response
 #   3. Stores the client credentials in a Kubernetes secret
 #   4. Registers a c8ctl profile pointing at the local deployment
+#   5. Creates the Zeebe authorizations the client needs to deploy,
+#      start, and inspect process instances (via the Orchestration
+#      Admin API, POST /v2/authorizations)
 #
 # Prerequisites:
 #   - The no-domain deployment must be running (Keycloak + Zeebe)
@@ -34,6 +37,7 @@ KEYCLOAK_PORT="${KEYCLOAK_PORT:-18080}"
 ZEEBE_PORT="${ZEEBE_PORT:-8080}"
 KEYCLOAK_REALM="${KEYCLOAK_REALM:-camunda-platform}"
 KEYCLOAK_ADMIN_USER="${KEYCLOAK_ADMIN_USER:-temp-admin}"
+IDENTITY_ADMIN_USER="${IDENTITY_ADMIN_USER:-admin}"
 OIDC_CLIENT_ID="zeebe-cli"
 OIDC_CLIENT_NAME="c8ctl CLI Client"
 C8CTL_PROFILE_NAME="${C8CTL_PROFILE_NAME:-rancher-desktop}"
@@ -271,7 +275,7 @@ else
   HTTP_CODE="$(echo "$CREATE_RESPONSE" | tail -1)"
   if [ "$HTTP_CODE" != "201" ] && [ "$HTTP_CODE" != "204" ]; then
     echo "ERROR: Failed to create client via Admin API (HTTP $HTTP_CODE)."
-    echo "       Response: $(echo "$CREATE_RESPONSE" | head -n -1)"
+    echo "       Response: $(echo "$CREATE_RESPONSE" | sed '$d')"
     echo ""
     echo "  You may need to create the client manually in the Keycloak UI."
     exit 1
@@ -290,8 +294,9 @@ else
 fi
 
 # ---- Add orchestration audience mapper to the client ----
-# In Camunda 8.10+, the Zeebe gateway (now "orchestration") requires
-# the "orchestration" audience in the token. This mapper adds it.
+# The Zeebe gateway accepts tokens with the "orchestration" audience. The
+# client-credentials flow in Keycloak issues the requested audience, but
+# explicit audience mappers make it robust. This mapper adds it.
 echo "Adding orchestration audience mapper..."
 
 # Check if mapper already exists
@@ -391,8 +396,7 @@ echo "Configuring c8ctl profile '${C8CTL_PROFILE_NAME}'..."
 c8ctl remove profile "$C8CTL_PROFILE_NAME" 2>/dev/null || true
 
 # Create the profile
-# In Camunda 8.10+, the Zeebe gateway is called "orchestration".
-# The audience must be "orchestration" for the token to be accepted.
+# The audience must be "orchestration" for the gateway to accept the token.
 c8ctl add profile "$C8CTL_PROFILE_NAME" \
   --baseUrl="http://localhost:${ZEEBE_PORT}" \
   --clientId="${OIDC_CLIENT_ID}" \
@@ -403,11 +407,23 @@ c8ctl add profile "$C8CTL_PROFILE_NAME" \
 # Set as active profile
 c8ctl use profile "$C8CTL_PROFILE_NAME" 2>/dev/null || true
 
-# ---- Create authorization for zeebe-cli client via Admin API ----
+# ---- Create authorizations for the zeebe-cli client ----
+# The Helm deployment declares an initializer-created authorization
+# (orchestration.initialization.authorizations in values-no-domain.yml), but
+# that initializer only runs at first startup — before this script creates the
+# zeebe-cli client — so the authorization never gets created. We therefore
+# create it here via the Orchestration (gateway) REST API.
+#
+# Note: the endpoint is POST /v2/authorizations (NOT /api/admin/authorizations),
+# and it requires a token that has the Camunda admin role. A client-credentials
+# token for zeebe-cli (or even the internal orchestration client) is not enough.
+# The admin role is granted to the Identity first user, so we obtain a token for
+# that user via the Keycloak resource-owner password grant using the
+# camunda-identity client (which has direct access grants enabled).
 echo ""
-echo "Creating authorization for '${OIDC_CLIENT_ID}' client via Admin API..."
+echo "Creating authorizations for '${OIDC_CLIENT_ID}' client via Orchestration Admin API..."
 
-# Start temporary port-forward for Zeebe gateway REST API (admin API)
+# Start temporary port-forward for the Zeebe gateway REST API
 ADMIN_PF_PID=""
 cleanup_admin_pf() {
   if [ -n "$ADMIN_PF_PID" ]; then
@@ -420,58 +436,122 @@ trap cleanup_admin_pf RETURN
 kubectl port-forward "svc/${RELEASE_NAME}-zeebe-gateway" -n "$NAMESPACE" "${ZEEBE_PORT}:8080" >/dev/null 2>&1 &
 ADMIN_PF_PID=$!
 
-# Wait for port-forward to be ready
-sleep 3
-for _ in $(seq 1 10); do
-  if curl -s -o /dev/null --max-time 3 "http://localhost:${ZEEBE_PORT}/ready" 2>/dev/null; then
+# Wait until the gateway responds. Any HTTP status (401 included) proves the
+# port-forward is up and the REST API is reachable — the old /ready check was
+# useless because /ready returns 404.
+GW_READY=false
+for _ in $(seq 1 20); do
+  if ! kill -0 "$ADMIN_PF_PID" 2>/dev/null; then
+    echo "ERROR: Zeebe gateway port-forward exited unexpectedly."
+    break
+  fi
+  GW_CODE="$(curl -s -o /dev/null -w "%{http_code}" --max-time 3 "http://localhost:${ZEEBE_PORT}/v2/topology" 2>/dev/null || true)"
+  if [ -n "$GW_CODE" ] && [ "$GW_CODE" != "000" ]; then
+    GW_READY=true
     break
   fi
   sleep 1
 done
 
-# Get an access token for the admin API (using the zeebe-cli client credentials)
-ADMIN_TOKEN=$(curl -s -X POST \
-  "${KEYCLOAK_BASE}/realms/${KEYCLOAK_REALM}/protocol/openid-connect/token" \
-  -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "grant_type=client_credentials" \
-  -d "client_id=${OIDC_CLIENT_ID}" \
-  -d "client_secret=${CLIENT_SECRET}" \
-  -d "audience=orchestration" 2>/dev/null | jq -r '.access_token // empty' 2>/dev/null || true)
+if [ "$GW_READY" != "true" ]; then
+  echo "WARNING: Zeebe gateway is not reachable on localhost:${ZEEBE_PORT}."
+  echo "         Skipping authorization creation. c8ctl deploy may still work,"
+  echo "         but starting process instances will fail with FORBIDDEN."
+  echo "         Re-run this script once the gateway is ready."
+else
+  ADMIN_PASSWORD="$(kubectl get secret camunda-credentials -n "$NAMESPACE" -o jsonpath='{.data.identity-first-user-password}' 2>/dev/null | base64 -d || true)"
 
-if [ -n "$ADMIN_TOKEN" ]; then
-  # Create authorization for zeebe-cli client to deploy resources
-  AUTH_PAYLOAD=$(cat <<EOF
+  if [ -z "$ADMIN_PASSWORD" ]; then
+    echo "WARNING: Could not retrieve the Identity first-user password (secret 'camunda-credentials')."
+    echo "         Skipping authorization creation."
+  else
+    # Refresh the Keycloak admin token (may have expired during the realm wait)
+    KEYCLOAK_TOKEN="$(get_admin_token)"
+    CAMUNDA_IDENTITY_SECRET="$(curl -s \
+      "${KEYCLOAK_ADMIN_URL}/clients?clientId=camunda-identity" \
+      -H "Authorization: Bearer ${KEYCLOAK_TOKEN}" 2>/dev/null | jq -r '.[0].secret // empty' 2>/dev/null || true)"
+
+    if [ -z "$CAMUNDA_IDENTITY_SECRET" ]; then
+      echo "WARNING: Could not retrieve the 'camunda-identity' client secret from Keycloak."
+      echo "         Skipping authorization creation."
+    else
+      ADMIN_TOKEN="$(curl -s -X POST \
+        "${KEYCLOAK_BASE}/realms/${KEYCLOAK_REALM}/protocol/openid-connect/token" \
+        -H "Content-Type: application/x-www-form-urlencoded" \
+        -d "grant_type=password" \
+        -d "client_id=camunda-identity" \
+        -d "client_secret=${CAMUNDA_IDENTITY_SECRET}" \
+        -d "username=${IDENTITY_ADMIN_USER}" \
+        -d "password=${ADMIN_PASSWORD}" \
+        -d "audience=orchestration" 2>/dev/null | jq -r '.access_token // empty' 2>/dev/null || true)"
+
+      if [ -z "$ADMIN_TOKEN" ]; then
+        echo "WARNING: Could not obtain an admin token for '${IDENTITY_ADMIN_USER}'."
+        echo "         Skipping authorization creation."
+      else
+        # Create each authorization; if one already exists (HTTP 409), update it
+        # to the full permission set so re-runs are idempotent.
+        ensure_authorization() {
+          local resource_type="$1"
+          local permissions="$2"
+          local payload
+          payload=$(cat <<EOF
 {
   "ownerType": "CLIENT",
   "ownerId": "${OIDC_CLIENT_ID}",
-  "resourceType": "RESOURCE",
+  "resourceType": "${resource_type}",
   "resourceId": "*",
-  "permissionTypes": ["CREATE", "READ"]
+  "permissionTypes": ${permissions}
 }
 EOF
 )
+          local code
+          code="$(curl -s -o /dev/null -w "%{http_code}" -X POST \
+            "http://localhost:${ZEEBE_PORT}/v2/authorizations" \
+            -H "Authorization: Bearer ${ADMIN_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d "$payload" 2>/dev/null || true)"
+          case "$code" in
+            200|201|204)
+              echo "  Authorization created: ${resource_type}/* ${permissions}"
+              ;;
+            409)
+              local key
+              key="$(curl -s -X POST \
+                "http://localhost:${ZEEBE_PORT}/v2/authorizations/search" \
+                -H "Authorization: Bearer ${ADMIN_TOKEN}" \
+                -H "Content-Type: application/json" \
+                -d "{\"filter\":{\"ownerType\":\"CLIENT\",\"ownerId\":\"${OIDC_CLIENT_ID}\",\"resourceType\":\"${resource_type}\"}}" 2>/dev/null \
+                | jq -r '.items[0].authorizationKey // empty' 2>/dev/null || true)"
+              if [ -n "$key" ]; then
+                curl -s -o /dev/null -X PUT \
+                  "http://localhost:${ZEEBE_PORT}/v2/authorizations/${key}" \
+                  -H "Authorization: Bearer ${ADMIN_TOKEN}" \
+                  -H "Content-Type: application/json" \
+                  -d "$payload"
+                echo "  Authorization updated: ${resource_type}/* ${permissions}"
+              else
+                echo "  WARNING: Authorization exists for ${resource_type}/* but its key could not be found."
+              fi
+              ;;
+            *)
+              echo "  WARNING: Could not create authorization for ${resource_type}/* (HTTP $code)."
+              ;;
+          esac
+        }
 
-  AUTH_RESPONSE=$(curl -s -w "\n%{http_code}" \
-    -X POST \
-    "http://localhost:${ZEEBE_PORT}/api/admin/authorizations" \
-    -H "Authorization: Bearer ${ADMIN_TOKEN}" \
-    -H "Content-Type: application/json" \
-    -d "$AUTH_PAYLOAD" 2>/dev/null || true)
-
-  HTTP_CODE=$(echo "$AUTH_RESPONSE" | tail -1)
-  if [ "$HTTP_CODE" = "201" ] || [ "$HTTP_CODE" = "200" ]; then
-    echo "Authorization created successfully for '${OIDC_CLIENT_ID}' client."
-  elif [ "$HTTP_CODE" = "409" ]; then
-    echo "Authorization already exists for '${OIDC_CLIENT_ID}' client."
-  else
-    echo "WARNING: Failed to create authorization (HTTP $HTTP_CODE)."
-    echo "         Response: $(echo "$AUTH_RESPONSE" | head -n -1)"
-    echo "         You may need to create it manually via Admin UI."
-    echo "         Owner type: CLIENT, Owner ID: ${OIDC_CLIENT_ID}, Resource: RESOURCE/*, Permissions: CREATE, READ"
+        # Permission names are validated per resource type by the API (a 400
+        # response lists the supported types). Sets chosen so c8ctl can deploy,
+        # run, list, and complete tasks as a local dev user.
+        ensure_authorization "RESOURCE" '["CREATE", "READ"]'
+        ensure_authorization "PROCESS_DEFINITION" '["CREATE_PROCESS_INSTANCE", "READ_PROCESS_DEFINITION", "READ_PROCESS_INSTANCE", "UPDATE_PROCESS_INSTANCE", "CANCEL_PROCESS_INSTANCE", "MODIFY_PROCESS_INSTANCE", "DELETE_PROCESS_INSTANCE", "READ_USER_TASK", "UPDATE_USER_TASK", "COMPLETE_USER_TASK", "CLAIM_USER_TASK"]'
+        ensure_authorization "DECISION_DEFINITION" '["CREATE_DECISION_INSTANCE", "READ_DECISION_DEFINITION", "READ_DECISION_INSTANCE", "DELETE_DECISION_INSTANCE"]'
+        ensure_authorization "DECISION_REQUIREMENTS_DEFINITION" '["READ"]'
+        ensure_authorization "USER_TASK" '["READ", "UPDATE", "CLAIM", "COMPLETE"]'
+        ensure_authorization "BATCH" '["CREATE", "READ"]'
+      fi
+    fi
   fi
-else
-  echo "WARNING: Could not obtain admin token. Skipping authorization creation."
-  echo "         You may need to create the authorization manually via Admin UI."
 fi
 
 cleanup_admin_pf
@@ -495,10 +575,12 @@ VERIFY_PIDS+=($!)
 kubectl port-forward "svc/${RELEASE_NAME}-zeebe-gateway" -n "$NAMESPACE" "${ZEEBE_PORT}:8080" >/dev/null 2>&1 &
 VERIFY_PIDS+=($!)
 
-# Wait for port-forwards to be ready
+# Wait for port-forwards to be ready (Keycloak and the Zeebe gateway)
 sleep 3
-for _ in $(seq 1 10); do
-  if curl -s -o /dev/null --max-time 3 "http://localhost:${KEYCLOAK_PORT}/auth/realms/master" 2>/dev/null; then
+for _ in $(seq 1 15); do
+  KC_CODE="$(curl -s -o /dev/null -w "%{http_code}" --max-time 3 "http://localhost:${KEYCLOAK_PORT}/auth/realms/master" 2>/dev/null || true)"
+  GW_CODE="$(curl -s -o /dev/null -w "%{http_code}" --max-time 3 "http://localhost:${ZEEBE_PORT}/v2/topology" 2>/dev/null || true)"
+  if [ "$KC_CODE" != "000" ] && [ -n "$KC_CODE" ] && [ "$GW_CODE" != "000" ] && [ -n "$GW_CODE" ]; then
     break
   fi
   sleep 1
