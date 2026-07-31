@@ -414,8 +414,10 @@ c8ctl remove profile "$C8CTL_PROFILE_NAME" 2>/dev/null || true
 
 # Create the profile
 # The audience must be "orchestration" for the gateway to accept the token.
+# The base URL must end with /v2 so c8ctl can derive the web-app URLs
+# (Operate/Tasklist) for `c8ctl open`.
 c8ctl add profile "$C8CTL_PROFILE_NAME" \
-  --baseUrl="http://localhost:${ZEEBE_PORT}" \
+  --baseUrl="http://localhost:${ZEEBE_PORT}/v2" \
   --clientId="${OIDC_CLIENT_ID}" \
   --clientSecret="${CLIENT_SECRET}" \
   --audience="orchestration" \
