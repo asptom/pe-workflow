@@ -10,33 +10,43 @@
     <bpmn:businessRuleTask id="Task_DocDetermination" name="Determine required documentation">
       <bpmn:extensionElements>
         <zeebe:calledDecision decisionId="Enrollment_Documentation" resultVariable="documentationResult" />
+        <zeebe:ioMapping>
+          <zeebe:input source="=provider.enrollmentType" target="enrollmentType" />
+        </zeebe:ioMapping>
       </bpmn:extensionElements>
       <bpmn:incoming>Flow_Start_DocDetermination</bpmn:incoming>
-      <bpmn:outgoing>Flow_DocDetermination_TypeGateway</bpmn:outgoing>
+      <bpmn:outgoing>Flow_DocDetermination_GenerateDoc</bpmn:outgoing>
     </bpmn:businessRuleTask>
+    <bpmn:serviceTask id="Task_GenerateDocumentation" name="Generate required documentation">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="generate-doc" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_DocDetermination_GenerateDoc</bpmn:incoming>
+      <bpmn:outgoing>Flow_GenerateDoc_TypeGateway</bpmn:outgoing>
+    </bpmn:serviceTask>
     <bpmn:exclusiveGateway id="Gateway_EnrollmentType" name="Enrollment type?" default="Flow_Type_855B">
-      <bpmn:incoming>Flow_DocDetermination_TypeGateway</bpmn:incoming>
+      <bpmn:incoming>Flow_GenerateDoc_TypeGateway</bpmn:incoming>
       <bpmn:outgoing>Flow_Type_855I</bpmn:outgoing>
       <bpmn:outgoing>Flow_Type_855A</bpmn:outgoing>
       <bpmn:outgoing>Flow_Type_855B</bpmn:outgoing>
     </bpmn:exclusiveGateway>
     <bpmn:callActivity id="Call_Delegate_855I" name="Execute 855I individual practitioner enrollment">
       <bpmn:extensionElements>
-        <zeebe:calledElement processId="Delegate_855I" propagateAllChildVariables="false" />
+        <zeebe:calledElement processId="Delegate_855I" propagateAllChildVariables="true" />
       </bpmn:extensionElements>
       <bpmn:incoming>Flow_Type_855I</bpmn:incoming>
       <bpmn:outgoing>Flow_855I_Merge</bpmn:outgoing>
     </bpmn:callActivity>
     <bpmn:callActivity id="Call_Delegate_855A" name="Execute 855A organization facility enrollment">
       <bpmn:extensionElements>
-        <zeebe:calledElement processId="Delegate_855A" propagateAllChildVariables="false" />
+        <zeebe:calledElement processId="Delegate_855A" propagateAllChildVariables="true" />
       </bpmn:extensionElements>
       <bpmn:incoming>Flow_Type_855A</bpmn:incoming>
       <bpmn:outgoing>Flow_855A_Merge</bpmn:outgoing>
     </bpmn:callActivity>
     <bpmn:callActivity id="Call_Delegate_855B" name="Execute 855B DMEPOS supplier enrollment">
       <bpmn:extensionElements>
-        <zeebe:calledElement processId="Delegate_855B" propagateAllChildVariables="false" />
+        <zeebe:calledElement processId="Delegate_855B" propagateAllChildVariables="true" />
       </bpmn:extensionElements>
       <bpmn:incoming>Flow_Type_855B</bpmn:incoming>
       <bpmn:outgoing>Flow_855B_Merge</bpmn:outgoing>
@@ -50,6 +60,9 @@
     <bpmn:businessRuleTask id="Task_EligibilityCheck" name="Evaluate enrollment eligibility">
       <bpmn:extensionElements>
         <zeebe:calledDecision decisionId="Eligibility_Rules" resultVariable="eligibilityResult" />
+        <zeebe:ioMapping>
+          <zeebe:input source="=provider.enrollmentType" target="enrollmentType" />
+        </zeebe:ioMapping>
       </bpmn:extensionElements>
       <bpmn:incoming>Flow_MergeDelegates_Eligibility</bpmn:incoming>
       <bpmn:outgoing>Flow_Eligibility_Gateway</bpmn:outgoing>
@@ -60,28 +73,44 @@
       <bpmn:outgoing>Flow_Eligibility_Conditional</bpmn:outgoing>
       <bpmn:outgoing>Flow_Eligibility_Eligible</bpmn:outgoing>
     </bpmn:exclusiveGateway>
-    <bpmn:scriptTask id="Task_SendIneligibility" name="Send ineligibility notice to provider">
+    <bpmn:serviceTask id="Task_SendIneligibility" name="Send ineligibility notice to provider">
       <bpmn:extensionElements>
-        <zeebe:script expression="=&quot;Ineligibility notice sent. Reason: &quot; + eligibilityResult.eligibilityStatus + &quot;. Provider: &quot; + provider.legalName" resultVariable="ineligibilityNoticeStatus" />
+        <zeebe:taskDefinition type="send-notification">
+          <zeebe:taskHeaders>
+            <zeebe:taskHeader key="kind" value="ineligibility" />
+          </zeebe:taskHeaders>
+        </zeebe:taskDefinition>
+        <zeebe:ioMapping>
+          <zeebe:input source="=&quot;ineligibility&quot;" target="kind" />
+          <zeebe:output source="=notificationStatus" target="ineligibilityNoticeStatus" />
+        </zeebe:ioMapping>
       </bpmn:extensionElements>
       <bpmn:incoming>Flow_Eligibility_Ineligible</bpmn:incoming>
       <bpmn:outgoing>Flow_Ineligibility_End</bpmn:outgoing>
-    </bpmn:scriptTask>
+    </bpmn:serviceTask>
     <bpmn:endEvent id="EndEvent_Ineligible" name="Enrollment ineligible">
       <bpmn:incoming>Flow_Ineligibility_End</bpmn:incoming>
     </bpmn:endEvent>
-    <bpmn:scriptTask id="Task_RequestAdditionalInfo" name="Request additional information from provider">
+    <bpmn:serviceTask id="Task_RequestAdditionalInfo" name="Request additional information from provider">
       <bpmn:extensionElements>
-        <zeebe:script expression="=&quot;Additional information requested. Status: &quot; + eligibilityResult.eligibilityStatus + &quot;. Response deadline: 30 days.&quot;" resultVariable="additionalInfoRequestStatus" />
+        <zeebe:taskDefinition type="send-notification">
+          <zeebe:taskHeaders>
+            <zeebe:taskHeader key="kind" value="additional-info" />
+          </zeebe:taskHeaders>
+        </zeebe:taskDefinition>
+        <zeebe:ioMapping>
+          <zeebe:input source="=&quot;additional-info&quot;" target="kind" />
+          <zeebe:output source="=notificationStatus" target="additionalInfoRequestStatus" />
+        </zeebe:ioMapping>
       </bpmn:extensionElements>
       <bpmn:incoming>Flow_Eligibility_Conditional</bpmn:incoming>
       <bpmn:outgoing>Flow_AdditionalInfo_Timer</bpmn:outgoing>
-    </bpmn:scriptTask>
+    </bpmn:serviceTask>
     <bpmn:intermediateCatchEvent id="Timer_AdditionalInfo" name="30-day response window">
       <bpmn:incoming>Flow_AdditionalInfo_Timer</bpmn:incoming>
       <bpmn:outgoing>Flow_Timer_AdditionalInfo_Merge</bpmn:outgoing>
       <bpmn:timerEventDefinition id="TimerDef_AdditionalInfo">
-        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">="P30D"</bpmn:timeDuration>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">="PT5S"</bpmn:timeDuration>
       </bpmn:timerEventDefinition>
     </bpmn:intermediateCatchEvent>
     <bpmn:exclusiveGateway id="Gateway_MergeEligibility">
@@ -96,47 +125,79 @@
       <bpmn:incoming>Flow_MergeEligibility_Timeline</bpmn:incoming>
       <bpmn:outgoing>Flow_Timeline_ForwardCMS</bpmn:outgoing>
     </bpmn:businessRuleTask>
-    <bpmn:scriptTask id="Task_ForwardToCMS" name="Forward complete application to CMS Provider Enrollment">
+    <bpmn:serviceTask id="Task_ForwardToCMS" name="Forward complete application to CMS Provider Enrollment">
       <bpmn:extensionElements>
-        <zeebe:script expression="=&quot;Complete application forwarded to CMS. Timeline: &quot; + string(timelineResult.totalEstimateDays) + &quot; days. Provider: &quot; + provider.legalName" resultVariable="cmsForwardStatus" />
+        <zeebe:taskDefinition type="send-notification">
+          <zeebe:taskHeaders>
+            <zeebe:taskHeader key="kind" value="cms-forward" />
+          </zeebe:taskHeaders>
+        </zeebe:taskDefinition>
+        <zeebe:ioMapping>
+          <zeebe:input source="=&quot;cms-forward&quot;" target="kind" />
+          <zeebe:output source="=notificationStatus" target="cmsForwardStatus" />
+        </zeebe:ioMapping>
       </bpmn:extensionElements>
       <bpmn:incoming>Flow_Timeline_ForwardCMS</bpmn:incoming>
       <bpmn:outgoing>Flow_ForwardCMS_Timer</bpmn:outgoing>
-    </bpmn:scriptTask>
+    </bpmn:serviceTask>
     <bpmn:intermediateCatchEvent id="Timer_CMSDecision" name="CMS review period (30 days)">
       <bpmn:incoming>Flow_ForwardCMS_Timer</bpmn:incoming>
       <bpmn:outgoing>Flow_Timer_CMSDecision_Gateway</bpmn:outgoing>
       <bpmn:timerEventDefinition id="TimerDef_CMSDecision">
-        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">="P30D"</bpmn:timeDuration>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">="PT5S"</bpmn:timeDuration>
       </bpmn:timerEventDefinition>
     </bpmn:intermediateCatchEvent>
-    <bpmn:exclusiveGateway id="Gateway_CMSDecision" name="CMS decision?" default="Flow_CMS_Denied">
+    <bpmn:serviceTask id="Task_SimulateCMSDecision" name="Simulate CMS decision">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="simulate-cms-decision" />
+      </bpmn:extensionElements>
       <bpmn:incoming>Flow_Timer_CMSDecision_Gateway</bpmn:incoming>
+      <bpmn:outgoing>Flow_SimCMSDecision_Gateway</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="Gateway_CMSDecision" name="CMS decision?" default="Flow_CMS_Denied">
+      <bpmn:incoming>Flow_SimCMSDecision_Gateway</bpmn:incoming>
       <bpmn:outgoing>Flow_CMS_Approved</bpmn:outgoing>
       <bpmn:outgoing>Flow_CMS_Denied</bpmn:outgoing>
     </bpmn:exclusiveGateway>
-    <bpmn:scriptTask id="Task_SendApproval" name="Send enrollment approval letter to provider">
+    <bpmn:serviceTask id="Task_SendApproval" name="Send enrollment approval letter to provider">
       <bpmn:extensionElements>
-        <zeebe:script expression="=&quot;Approval letter sent. CCN: &quot; + cmsCertificationNumber + &quot;. PTAN: &quot; + ptanNumber + &quot;. Effective: &quot; + effectiveDate" resultVariable="approvalLetterStatus" />
+        <zeebe:taskDefinition type="send-notification">
+          <zeebe:taskHeaders>
+            <zeebe:taskHeader key="kind" value="approval" />
+          </zeebe:taskHeaders>
+        </zeebe:taskDefinition>
+        <zeebe:ioMapping>
+          <zeebe:input source="=&quot;approval&quot;" target="kind" />
+          <zeebe:output source="=notificationStatus" target="approvalLetterStatus" />
+        </zeebe:ioMapping>
       </bpmn:extensionElements>
       <bpmn:incoming>Flow_CMS_Approved</bpmn:incoming>
       <bpmn:outgoing>Flow_Approval_End</bpmn:outgoing>
-    </bpmn:scriptTask>
+    </bpmn:serviceTask>
     <bpmn:endEvent id="EndEvent_Approved" name="Enrollment approved">
       <bpmn:incoming>Flow_Approval_End</bpmn:incoming>
     </bpmn:endEvent>
-    <bpmn:scriptTask id="Task_SendDenial" name="Send enrollment denial letter to provider">
+    <bpmn:serviceTask id="Task_SendDenial" name="Send enrollment denial letter to provider">
       <bpmn:extensionElements>
-        <zeebe:script expression="=&quot;Denial letter sent. Reason: &quot; + denialReason + &quot;. Provider may appeal or resubmit.&quot;" resultVariable="denialLetterStatus" />
+        <zeebe:taskDefinition type="send-notification">
+          <zeebe:taskHeaders>
+            <zeebe:taskHeader key="kind" value="denial" />
+          </zeebe:taskHeaders>
+        </zeebe:taskDefinition>
+        <zeebe:ioMapping>
+          <zeebe:input source="=&quot;denial&quot;" target="kind" />
+          <zeebe:output source="=notificationStatus" target="denialLetterStatus" />
+        </zeebe:ioMapping>
       </bpmn:extensionElements>
       <bpmn:incoming>Flow_CMS_Denied</bpmn:incoming>
       <bpmn:outgoing>Flow_Denial_End</bpmn:outgoing>
-    </bpmn:scriptTask>
+    </bpmn:serviceTask>
     <bpmn:endEvent id="EndEvent_Denied" name="Enrollment denied">
       <bpmn:incoming>Flow_Denial_End</bpmn:incoming>
     </bpmn:endEvent>
     <bpmn:sequenceFlow id="Flow_Start_DocDetermination" sourceRef="Start_Enrollment" targetRef="Task_DocDetermination" />
-    <bpmn:sequenceFlow id="Flow_DocDetermination_TypeGateway" sourceRef="Task_DocDetermination" targetRef="Gateway_EnrollmentType" />
+    <bpmn:sequenceFlow id="Flow_DocDetermination_GenerateDoc" sourceRef="Task_DocDetermination" targetRef="Task_GenerateDocumentation" />
+    <bpmn:sequenceFlow id="Flow_GenerateDoc_TypeGateway" sourceRef="Task_GenerateDocumentation" targetRef="Gateway_EnrollmentType" />
     <bpmn:sequenceFlow id="Flow_Type_855I" name="855I" sourceRef="Gateway_EnrollmentType" targetRef="Call_Delegate_855I">
       <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=provider.enrollmentType = "855I"</bpmn:conditionExpression>
     </bpmn:sequenceFlow>
@@ -162,7 +223,8 @@
     <bpmn:sequenceFlow id="Flow_MergeEligibility_Timeline" sourceRef="Gateway_MergeEligibility" targetRef="Task_CalculateTimeline" />
     <bpmn:sequenceFlow id="Flow_Timeline_ForwardCMS" sourceRef="Task_CalculateTimeline" targetRef="Task_ForwardToCMS" />
     <bpmn:sequenceFlow id="Flow_ForwardCMS_Timer" sourceRef="Task_ForwardToCMS" targetRef="Timer_CMSDecision" />
-    <bpmn:sequenceFlow id="Flow_Timer_CMSDecision_Gateway" sourceRef="Timer_CMSDecision" targetRef="Gateway_CMSDecision" />
+    <bpmn:sequenceFlow id="Flow_Timer_CMSDecision_Gateway" sourceRef="Timer_CMSDecision" targetRef="Task_SimulateCMSDecision" />
+    <bpmn:sequenceFlow id="Flow_SimCMSDecision_Gateway" sourceRef="Task_SimulateCMSDecision" targetRef="Gateway_CMSDecision" />
     <bpmn:sequenceFlow id="Flow_CMS_Approved" name="Approved" sourceRef="Gateway_CMSDecision" targetRef="Task_SendApproval">
       <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=cmsDecision = "Approved"</bpmn:conditionExpression>
     </bpmn:sequenceFlow>
@@ -180,6 +242,10 @@
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Task_DocDetermination_di" bpmnElement="Task_DocDetermination">
         <dc:Bounds x="240" y="280" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_GenerateDocumentation_di" bpmnElement="Task_GenerateDocumentation">
+        <dc:Bounds x="350" y="280" width="80" height="80" />
         <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Gateway_EnrollmentType_di" bpmnElement="Gateway_EnrollmentType" isMarkerVisible="true">
@@ -250,10 +316,14 @@
           <dc:Bounds x="1919" y="345" width="82" height="27" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_SimulateCMSDecision_di" bpmnElement="Task_SimulateCMSDecision">
+        <dc:Bounds x="1990" y="280" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Gateway_CMSDecision_di" bpmnElement="Gateway_CMSDecision" isMarkerVisible="true">
-        <dc:Bounds x="2045" y="295" width="50" height="50" />
+        <dc:Bounds x="2100" y="295" width="50" height="50" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="2027" y="352" width="86" height="14" />
+          <dc:Bounds x="2082" y="352" width="86" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Task_SendApproval_di" bpmnElement="Task_SendApproval">
@@ -280,8 +350,12 @@
         <di:waypoint x="188" y="320" />
         <di:waypoint x="240" y="320" />
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_DocDetermination_TypeGateway_di" bpmnElement="Flow_DocDetermination_TypeGateway">
+      <bpmndi:BPMNEdge id="Flow_DocDetermination_GenerateDoc_di" bpmnElement="Flow_DocDetermination_GenerateDoc">
         <di:waypoint x="340" y="320" />
+        <di:waypoint x="350" y="320" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_GenerateDoc_TypeGateway_di" bpmnElement="Flow_GenerateDoc_TypeGateway">
+        <di:waypoint x="430" y="320" />
         <di:waypoint x="440" y="320" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_Type_855I_di" bpmnElement="Flow_Type_855I">
@@ -379,19 +453,23 @@
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_Timer_CMSDecision_Gateway_di" bpmnElement="Flow_Timer_CMSDecision_Gateway">
         <di:waypoint x="1978" y="320" />
-        <di:waypoint x="2045" y="320" />
+        <di:waypoint x="1990" y="320" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_SimCMSDecision_Gateway_di" bpmnElement="Flow_SimCMSDecision_Gateway">
+        <di:waypoint x="2090" y="320" />
+        <di:waypoint x="2100" y="320" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_CMS_Approved_di" bpmnElement="Flow_CMS_Approved">
-        <di:waypoint x="2070" y="295" />
-        <di:waypoint x="2070" y="220" />
+        <di:waypoint x="2125" y="295" />
+        <di:waypoint x="2125" y="220" />
         <di:waypoint x="2140" y="220" />
         <bpmndi:BPMNLabel>
           <dc:Bounds x="2079" y="250" width="48" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_CMS_Denied_di" bpmnElement="Flow_CMS_Denied">
-        <di:waypoint x="2070" y="345" />
-        <di:waypoint x="2070" y="420" />
+        <di:waypoint x="2125" y="345" />
+        <di:waypoint x="2125" y="420" />
         <di:waypoint x="2140" y="420" />
         <bpmndi:BPMNLabel>
           <dc:Bounds x="2079" y="378" width="35" height="14" />

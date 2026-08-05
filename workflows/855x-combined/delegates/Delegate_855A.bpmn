@@ -13,7 +13,7 @@
     </bpmn:callActivity>
     <bpmn:callActivity id="Call_855A_OIG" name="Execute OIG Screening">
       <bpmn:extensionElements>
-        <zeebe:calledElement processId="Shared_OIG_Screening" propagateAllChildVariables="false" />
+        <zeebe:calledElement processId="Shared_OIG_Screening" propagateAllChildVariables="true" />
       </bpmn:extensionElements>
       <bpmn:incoming>Flow_855A_2</bpmn:incoming>
       <bpmn:outgoing>Flow_855A_3</bpmn:outgoing>
@@ -27,20 +27,20 @@
       <bpmn:incoming>Flow_855A_3</bpmn:incoming>
       <bpmn:outgoing>Flow_855A_4</bpmn:outgoing>
     </bpmn:userTask>
-    <bpmn:scriptTask id="Script_855A_License" name="Verify Facility License">
+    <bpmn:serviceTask id="Script_855A_License" name="Verify Facility License">
       <bpmn:extensionElements>
-        <zeebe:script expression="=if provider.entityType = &quot;Facility&quot; and provider.licenseNumber != null then true else false" resultVariable="validation.licenseValid" />
+        <zeebe:taskDefinition type="verify-license" />
       </bpmn:extensionElements>
       <bpmn:incoming>Flow_855A_4</bpmn:incoming>
       <bpmn:outgoing>Flow_855A_5</bpmn:outgoing>
-    </bpmn:scriptTask>
-    <bpmn:scriptTask id="Script_855A_Fire" name="Check Fire Safety Compliance">
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Script_855A_Fire" name="Check Fire Safety Compliance">
       <bpmn:extensionElements>
-        <zeebe:script expression="=if provider.fireSafetyCertification != null then true else false" resultVariable="provider.fireSafetyCompliant" />
+        <zeebe:taskDefinition type="verify-fire-safety" />
       </bpmn:extensionElements>
       <bpmn:incoming>Flow_855A_5</bpmn:incoming>
       <bpmn:outgoing>Flow_855A_6</bpmn:outgoing>
-    </bpmn:scriptTask>
+    </bpmn:serviceTask>
     <bpmn:callActivity id="Call_855A_SA" name="Execute SA Referral">
       <bpmn:extensionElements>
         <zeebe:calledElement processId="Shared_SA_Referral" propagateAllChildVariables="false" />
@@ -57,13 +57,13 @@
       <bpmn:incoming>Flow_855A_7</bpmn:incoming>
       <bpmn:outgoing>Flow_855A_8</bpmn:outgoing>
     </bpmn:userTask>
-    <bpmn:scriptTask id="Script_855A_SiteResults" name="Process Site Visit Results">
+    <bpmn:serviceTask id="Script_855A_SiteResults" name="Process Site Visit Results">
       <bpmn:extensionElements>
-        <zeebe:script expression="=if siteVisitOutcome = &quot;Passed&quot; then true else false" resultVariable="provider.siteVerified" />
+        <zeebe:taskDefinition type="process-site-visit" />
       </bpmn:extensionElements>
       <bpmn:incoming>Flow_855A_8</bpmn:incoming>
       <bpmn:outgoing>Flow_855A_9</bpmn:outgoing>
-    </bpmn:scriptTask>
+    </bpmn:serviceTask>
     <bpmn:endEvent id="End_855A" name="End 855A">
       <bpmn:incoming>Flow_855A_9</bpmn:incoming>
     </bpmn:endEvent>

@@ -1,0 +1,360 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pe-eligibility
+  namespace: camunda
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pe-eligibility
+  template:
+    metadata:
+      labels:
+        app: pe-eligibility
+    spec:
+      containers:
+        - name: eligibility
+          image: pe-workflow/eligibility:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8081
+          env:
+            - name: ZEEBE_ADDRESS
+              value: camunda-zeebe-gateway:26500
+            - name: ZEEBE_AUTHORIZATION_SERVER_URL
+              value: http://keycloak-service:18080/auth/realms/camunda-platform/protocol/openid-connect/token
+            - name: ZEEBE_TOKEN_AUDIENCE
+              value: orchestration
+            - name: ZEEBE_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: c8ctl-credentials
+                  key: client-id
+            - name: ZEEBE_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: c8ctl-credentials
+                  key: client-secret
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8081
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8081
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pe-eligibility
+  namespace: camunda
+spec:
+  type: ClusterIP
+  selector:
+    app: pe-eligibility
+  ports:
+    - port: 8081
+      targetPort: 8081
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pe-verification
+  namespace: camunda
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pe-verification
+  template:
+    metadata:
+      labels:
+        app: pe-verification
+    spec:
+      containers:
+        - name: verification
+          image: pe-workflow/verification:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8082
+          env:
+            - name: ZEEBE_ADDRESS
+              value: camunda-zeebe-gateway:26500
+            - name: ZEEBE_AUTHORIZATION_SERVER_URL
+              value: http://keycloak-service:18080/auth/realms/camunda-platform/protocol/openid-connect/token
+            - name: ZEEBE_TOKEN_AUDIENCE
+              value: orchestration
+            - name: ZEEBE_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: c8ctl-credentials
+                  key: client-id
+            - name: ZEEBE_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: c8ctl-credentials
+                  key: client-secret
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8082
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8082
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pe-verification
+  namespace: camunda
+spec:
+  type: ClusterIP
+  selector:
+    app: pe-verification
+  ports:
+    - port: 8082
+      targetPort: 8082
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pe-scheduling
+  namespace: camunda
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pe-scheduling
+  template:
+    metadata:
+      labels:
+        app: pe-scheduling
+    spec:
+      containers:
+        - name: scheduling
+          image: pe-workflow/scheduling:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8083
+          env:
+            - name: ZEEBE_ADDRESS
+              value: camunda-zeebe-gateway:26500
+            - name: ZEEBE_AUTHORIZATION_SERVER_URL
+              value: http://keycloak-service:18080/auth/realms/camunda-platform/protocol/openid-connect/token
+            - name: ZEEBE_TOKEN_AUDIENCE
+              value: orchestration
+            - name: ZEEBE_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: c8ctl-credentials
+                  key: client-id
+            - name: ZEEBE_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: c8ctl-credentials
+                  key: client-secret
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8083
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8083
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pe-scheduling
+  namespace: camunda
+spec:
+  type: ClusterIP
+  selector:
+    app: pe-scheduling
+  ports:
+    - port: 8083
+      targetPort: 8083
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pe-documents
+  namespace: camunda
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pe-documents
+  template:
+    metadata:
+      labels:
+        app: pe-documents
+    spec:
+      containers:
+        - name: documents
+          image: pe-workflow/documents:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8084
+          env:
+            - name: ZEEBE_ADDRESS
+              value: camunda-zeebe-gateway:26500
+            - name: ZEEBE_AUTHORIZATION_SERVER_URL
+              value: http://keycloak-service:18080/auth/realms/camunda-platform/protocol/openid-connect/token
+            - name: ZEEBE_TOKEN_AUDIENCE
+              value: orchestration
+            - name: ZEEBE_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: c8ctl-credentials
+                  key: client-id
+            - name: ZEEBE_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: c8ctl-credentials
+                  key: client-secret
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8084
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8084
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pe-documents
+  namespace: camunda
+spec:
+  type: ClusterIP
+  selector:
+    app: pe-documents
+  ports:
+    - port: 8084
+      targetPort: 8084
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pe-notifications
+  namespace: camunda
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pe-notifications
+  template:
+    metadata:
+      labels:
+        app: pe-notifications
+    spec:
+      containers:
+        - name: notifications
+          image: pe-workflow/notifications:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8085
+          env:
+            - name: ZEEBE_ADDRESS
+              value: camunda-zeebe-gateway:26500
+            - name: ZEEBE_AUTHORIZATION_SERVER_URL
+              value: http://keycloak-service:18080/auth/realms/camunda-platform/protocol/openid-connect/token
+            - name: ZEEBE_TOKEN_AUDIENCE
+              value: orchestration
+            - name: ZEEBE_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: c8ctl-credentials
+                  key: client-id
+            - name: ZEEBE_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: c8ctl-credentials
+                  key: client-secret
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8085
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8085
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pe-notifications
+  namespace: camunda
+spec:
+  type: ClusterIP
+  selector:
+    app: pe-notifications
+  ports:
+    - port: 8085
+      targetPort: 8085
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pe-simulator
+  namespace: camunda
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pe-simulator
+  template:
+    metadata:
+      labels:
+        app: pe-simulator
+    spec:
+      containers:
+        - name: simulator
+          image: pe-workflow/simulator:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8086
+          env:
+            - name: ZEEBE_ADDRESS
+              value: camunda-zeebe-gateway:26500
+            - name: ZEEBE_AUTHORIZATION_SERVER_URL
+              value: http://keycloak-service:18080/auth/realms/camunda-platform/protocol/openid-connect/token
+            - name: ZEEBE_TOKEN_AUDIENCE
+              value: orchestration
+            - name: ZEEBE_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: c8ctl-credentials
+                  key: client-id
+            - name: ZEEBE_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: c8ctl-credentials
+                  key: client-secret
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8086
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8086
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pe-simulator
+  namespace: camunda
+spec:
+  type: ClusterIP
+  selector:
+    app: pe-simulator
+  ports:
+    - port: 8086
+      targetPort: 8086

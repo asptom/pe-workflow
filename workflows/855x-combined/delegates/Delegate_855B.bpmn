@@ -13,32 +13,32 @@
     </bpmn:callActivity>
     <bpmn:callActivity id="Call_855B_OIG" name="Execute OIG Screening">
       <bpmn:extensionElements>
-        <zeebe:calledElement processId="Shared_OIG_Screening" propagateAllChildVariables="false" />
+        <zeebe:calledElement processId="Shared_OIG_Screening" propagateAllChildVariables="true" />
       </bpmn:extensionElements>
       <bpmn:incoming>Flow_855B_2</bpmn:incoming>
       <bpmn:outgoing>Flow_855B_3</bpmn:outgoing>
     </bpmn:callActivity>
-    <bpmn:scriptTask id="Script_855B_StateLicense" name="Verify DME State Licensure">
+    <bpmn:serviceTask id="Script_855B_StateLicense" name="Verify DME State Licensure">
       <bpmn:extensionElements>
-        <zeebe:script expression="=if provider.entityType = &quot;DME Supplier&quot; and provider.stateLicenseNumber != null then true else false" resultVariable="validation.licenseValid" />
+        <zeebe:taskDefinition type="verify-license" />
       </bpmn:extensionElements>
       <bpmn:incoming>Flow_855B_3</bpmn:incoming>
       <bpmn:outgoing>Flow_855B_4</bpmn:outgoing>
-    </bpmn:scriptTask>
-    <bpmn:scriptTask id="Script_855B_Bond" name="Verify Surety Bond">
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Script_855B_Bond" name="Verify Surety Bond">
       <bpmn:extensionElements>
-        <zeebe:script expression="=if provider.suretyBondAmount &gt;= 50000 then true else false" resultVariable="provider.suretyBondValid" />
+        <zeebe:taskDefinition type="verify-bond" />
       </bpmn:extensionElements>
       <bpmn:incoming>Flow_855B_4</bpmn:incoming>
       <bpmn:outgoing>Flow_855B_5</bpmn:outgoing>
-    </bpmn:scriptTask>
-    <bpmn:scriptTask id="Script_855B_Equipment" name="Verify Equipment Licensure">
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Script_855B_Equipment" name="Verify Equipment Licensure">
       <bpmn:extensionElements>
-        <zeebe:script expression="=if provider.equipmentLicenseNumber != null then true else false" resultVariable="provider.equipmentLicensureValid" />
+        <zeebe:taskDefinition type="verify-equipment" />
       </bpmn:extensionElements>
       <bpmn:incoming>Flow_855B_5</bpmn:incoming>
       <bpmn:outgoing>Flow_855B_6</bpmn:outgoing>
-    </bpmn:scriptTask>
+    </bpmn:serviceTask>
     <bpmn:callActivity id="Call_855B_SA" name="Execute SA Referral">
       <bpmn:extensionElements>
         <zeebe:calledElement processId="Shared_SA_Referral" propagateAllChildVariables="false" />

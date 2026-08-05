@@ -13,25 +13,25 @@
     </bpmn:callActivity>
     <bpmn:callActivity id="Call_855I_OIG" name="Execute OIG Screening">
       <bpmn:extensionElements>
-        <zeebe:calledElement processId="Shared_OIG_Screening" propagateAllChildVariables="false" />
+        <zeebe:calledElement processId="Shared_OIG_Screening" propagateAllChildVariables="true" />
       </bpmn:extensionElements>
       <bpmn:incoming>Flow_855I_2</bpmn:incoming>
       <bpmn:outgoing>Flow_855I_3</bpmn:outgoing>
     </bpmn:callActivity>
-    <bpmn:scriptTask id="Script_855I_License" name="Verify Practitioner License">
+    <bpmn:serviceTask id="Script_855I_License" name="Verify Practitioner License">
       <bpmn:extensionElements>
-        <zeebe:script expression="=if provider.entityType = &quot;Physician&quot; or provider.entityType = &quot;NPP&quot; then true else false" resultVariable="validation.licenseValid" />
+        <zeebe:taskDefinition type="verify-license" />
       </bpmn:extensionElements>
       <bpmn:incoming>Flow_855I_3</bpmn:incoming>
       <bpmn:outgoing>Flow_855I_4</bpmn:outgoing>
-    </bpmn:scriptTask>
-    <bpmn:scriptTask id="Script_855I_Board" name="Check Board Certification">
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Script_855I_Board" name="Check Board Certification">
       <bpmn:extensionElements>
-        <zeebe:script expression="=if provider.entityType = &quot;Physician&quot; and validation.licenseValid then true else false" resultVariable="provider.boardCertified" />
+        <zeebe:taskDefinition type="verify-board-cert" />
       </bpmn:extensionElements>
       <bpmn:incoming>Flow_855I_4</bpmn:incoming>
       <bpmn:outgoing>Flow_855I_5</bpmn:outgoing>
-    </bpmn:scriptTask>
+    </bpmn:serviceTask>
     <bpmn:callActivity id="Call_855I_SA" name="Execute SA Referral">
       <bpmn:extensionElements>
         <zeebe:calledElement processId="Shared_SA_Referral" propagateAllChildVariables="false" />

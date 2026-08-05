@@ -4,41 +4,41 @@
     <bpmn:startEvent id="StartEvent_1" name="Screening Initiated">
       <bpmn:outgoing>Flow_1</bpmn:outgoing>
     </bpmn:startEvent>
-    <bpmn:scriptTask id="Task_ScreenOIG" name="Screen OIG Exclusions">
+    <bpmn:serviceTask id="Task_ScreenOIG" name="Screen OIG Exclusions">
       <bpmn:extensionElements>
-        <zeebe:script expression="true" resultVariable="verification.oigCleared" />
+        <zeebe:taskDefinition type="screen-oig" />
       </bpmn:extensionElements>
       <bpmn:incoming>Flow_1</bpmn:incoming>
       <bpmn:outgoing>Flow_2</bpmn:outgoing>
-    </bpmn:scriptTask>
-    <bpmn:scriptTask id="Task_ScreenSAM" name="Screen SAM Exclusions">
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Task_ScreenSAM" name="Screen SAM Exclusions">
       <bpmn:extensionElements>
-        <zeebe:script expression="true" resultVariable="verification.samCleared" />
+        <zeebe:taskDefinition type="screen-sam" />
       </bpmn:extensionElements>
       <bpmn:incoming>Flow_2</bpmn:incoming>
       <bpmn:outgoing>Flow_3</bpmn:outgoing>
-    </bpmn:scriptTask>
-    <bpmn:scriptTask id="Task_VerifyNPI" name="Verify NPI Status">
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Task_VerifyNPI" name="Verify NPI Status">
       <bpmn:extensionElements>
-        <zeebe:script expression="true" resultVariable="validation.npiIsActive" />
+        <zeebe:taskDefinition type="verify-npi" />
       </bpmn:extensionElements>
       <bpmn:incoming>Flow_3</bpmn:incoming>
       <bpmn:outgoing>Flow_4</bpmn:outgoing>
-    </bpmn:scriptTask>
-    <bpmn:scriptTask id="Task_VerifyTIN" name="Verify TIN Match">
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Task_VerifyTIN" name="Verify TIN Match">
       <bpmn:extensionElements>
-        <zeebe:script expression="true" resultVariable="validation.npiMatchesTIN" />
+        <zeebe:taskDefinition type="verify-tin" />
       </bpmn:extensionElements>
       <bpmn:incoming>Flow_4</bpmn:incoming>
       <bpmn:outgoing>Flow_5</bpmn:outgoing>
-    </bpmn:scriptTask>
-    <bpmn:scriptTask id="Task_VerifyLicense" name="Verify License">
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Task_VerifyLicense" name="Verify License">
       <bpmn:extensionElements>
-        <zeebe:script expression="true" resultVariable="validation.licenseValid" />
+        <zeebe:taskDefinition type="verify-license" />
       </bpmn:extensionElements>
       <bpmn:incoming>Flow_5</bpmn:incoming>
       <bpmn:outgoing>Flow_6</bpmn:outgoing>
-    </bpmn:scriptTask>
+    </bpmn:serviceTask>
     <bpmn:endEvent id="EndEvent_1" name="Screening Complete">
       <bpmn:incoming>Flow_6</bpmn:incoming>
     </bpmn:endEvent>
