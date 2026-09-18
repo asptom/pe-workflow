@@ -27,3 +27,14 @@ env_exports.sh
 *.obj
 coverprofile*
 *.cover.out
+
+# Angular build output embedded by the BFF
+web/dist/
+web/node_modules/
+services/cmd/webapp/static/*
+
+# Playwright test suite
+playwright-tests/node_modules/
+.env
+playwright-report/
+test-results/

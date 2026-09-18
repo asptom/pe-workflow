@@ -1,0 +1,22 @@
+{
+  "name": "pe-workflow-playwright",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Playwright E2E suite for the pe-workflow Angular SPA and Go BFF.",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:ui": "playwright test --ui",
+    "typecheck": "tsc --noEmit",
+    "install:browsers": "playwright install chromium"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.52.0",
+    "@types/node": "^24.0.0",
+    "dotenv": "^16.4.7",
+    "typescript": "^5.7.0"
+  }
+}

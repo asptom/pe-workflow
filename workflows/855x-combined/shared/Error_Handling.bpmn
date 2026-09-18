@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="Definitions_ErrorHandling" targetNamespace="http://bpmn.io/schema/bpmn" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.8.0">
-  <bpmn:process id="Shared_Error_Handling" isExecutable="true">
+  <bpmn:process id="Shared_Error_Handling" name="Error Handling" isExecutable="true">
     <bpmn:startEvent id="StartEvent_1" name="Platform Error">
       <bpmn:outgoing>Flow_1</bpmn:outgoing>
       <bpmn:errorEventDefinition errorRef="Error_PLATFORM_ERROR" />

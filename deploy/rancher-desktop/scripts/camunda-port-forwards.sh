@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 
 # Namespace of the Camunda deployment (override with CAMUNDA_NAMESPACE)
 CAMUNDA_NAMESPACE="${CAMUNDA_NAMESPACE:-camunda}"
@@ -13,6 +14,8 @@ FORWARDS=(
   "svc/camunda-web-modeler-websockets -n $CAMUNDA_NAMESPACE 8085:80"
   "svc/camunda-console -n $CAMUNDA_NAMESPACE 8087:80"
   "svc/camunda-connectors -n $CAMUNDA_NAMESPACE 8086:8080"
+  "svc/pe-webapp -n $CAMUNDA_NAMESPACE 8088:8080"
+  "svc/pe-simulator -n $CAMUNDA_NAMESPACE 8186:8086"
 )
 
 # Array to store background process IDs
@@ -27,8 +30,8 @@ cleanup() {
   exit 0
 }
 
-# Trap Ctrl+C (SIGINT) and call cleanup
-trap cleanup SIGINT
+# Clean up on any termination (Ctrl+C, SIGTERM, or normal exit)
+trap cleanup EXIT INT TERM
 
 # Loop and launch each forward in the background
 for item in "${FORWARDS[@]}"; do

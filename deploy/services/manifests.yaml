@@ -358,3 +358,46 @@ spec:
   ports:
     - port: 8086
       targetPort: 8086
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pe-webapp
+  namespace: camunda
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: pe-webapp } }
+  template:
+    metadata: { labels: { app: pe-webapp } }
+    spec:
+      containers:
+        - name: webapp
+          image: pe-workflow/webapp:latest
+          imagePullPolicy: IfNotPresent
+          ports: [{ containerPort: 8080 }]
+          env:
+            - name: ZEEBE_ADDRESS
+              value: camunda-zeebe-gateway:26500
+            - name: ZEEBE_REST_ADDRESS
+              value: http://camunda-zeebe-gateway:8080
+            - name: ZEEBE_AUTHORIZATION_SERVER_URL
+              value: http://keycloak-service:18080/auth/realms/camunda-platform/protocol/openid-connect/token
+            - name: ZEEBE_TOKEN_AUDIENCE
+              value: orchestration
+            - name: ZEEBE_CLIENT_ID
+              valueFrom: { secretKeyRef: { name: c8ctl-credentials, key: client-id } }
+            - name: ZEEBE_CLIENT_SECRET
+              valueFrom: { secretKeyRef: { name: c8ctl-credentials, key: client-secret } }
+          livenessProbe:  { httpGet: { path: /healthz, port: 8080 } }
+          readinessProbe: { httpGet: { path: /healthz, port: 8080 } }
+          resources:
+            requests: { cpu: 50m, memory: 64Mi }
+            limits:   { cpu: 250m, memory: 256Mi }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: pe-webapp, namespace: camunda }
+spec:
+  type: ClusterIP
+  selector: { app: pe-webapp }
+  ports: [{ port: 8080, targetPort: 8080 }]

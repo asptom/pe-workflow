@@ -55,3 +55,10 @@ orchestration:
 identity:
     enabled: true
     contextPath: /managementidentity
+    # Management Identity must be told which realm to provision. The chart only
+    # renders `keycloak.realm` (and thus creates the realm on startup) when
+    # identity.realm.enabled is set. Without this, the realm never exists and
+    # Zeebe/Connectors crash-loop on the OIDC issuer 404.
+    realm:
+        enabled: true
+        id: camunda-platform

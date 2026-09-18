@@ -1,0 +1,625 @@
+openapi: 3.0.3
+info:
+  title: PE Workflow BFF API
+  version: 1.0.0
+  description: Tokenless browser-facing BFF for the Camunda 8.9 Orchestration Cluster REST API.
+servers:
+  - url: http://localhost:8088
+    description: Local BFF
+security: []
+paths:
+  /api/process-instances:
+    post:
+      operationId: searchProcessInstances
+      summary: Search process instances
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProcessInstanceSearchRequest'
+      responses:
+        '200':
+          description: Process instances
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProcessInstanceSearchResponse'
+        default:
+          $ref: '#/components/responses/ApiError'
+  /api/process-instances/start:
+    post:
+      operationId: startProcessInstance
+      summary: Start a process instance
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StartProcessInstanceRequest'
+      responses:
+        '200':
+          description: Started process instance
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StartProcessInstanceResponse'
+        default:
+          $ref: '#/components/responses/ApiError'
+  /api/process-instances/{processInstanceKey}:
+    parameters:
+      - $ref: '#/components/parameters/ProcessInstanceKey'
+    get:
+      operationId: getProcessInstance
+      summary: Get process instance details
+      responses:
+        '200':
+          description: Process instance
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProcessInstance'
+        default:
+          $ref: '#/components/responses/ApiError'
+  /api/process-instances/{processInstanceKey}/sequences:
+    parameters:
+      - $ref: '#/components/parameters/ProcessInstanceKey'
+    get:
+      operationId: getProcessInstanceSequences
+      summary: Get process instance sequence flows
+      responses:
+        '200':
+          description: Sequence flows traversed by the process instance
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SequenceFlowSearchResponse'
+        default:
+          $ref: '#/components/responses/ApiError'
+  /api/process-instances/{processInstanceKey}/variables:
+    parameters:
+      - $ref: '#/components/parameters/ProcessInstanceKey'
+    post:
+      operationId: searchProcessInstanceVariables
+      summary: Search process instance variables
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VariableSearchRequest'
+      responses:
+        '200':
+          description: Process variables
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VariableSearchResponse'
+        default:
+          $ref: '#/components/responses/ApiError'
+  /api/process-definitions:
+    post:
+      operationId: searchProcessDefinitions
+      summary: Search process definitions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProcessDefinitionSearchRequest'
+      responses:
+        '200':
+          description: Process definitions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProcessDefinitionSearchResponse'
+        default:
+          $ref: '#/components/responses/ApiError'
+  /api/process-definitions/{processDefinitionKey}/xml:
+    parameters:
+      - $ref: '#/components/parameters/ProcessDefinitionKey'
+    get:
+      operationId: getProcessDefinitionXml
+      summary: Get BPMN XML
+      responses:
+        '200':
+          description: BPMN XML wrapped for the BFF
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/XmlResponse'
+        default:
+          $ref: '#/components/responses/ApiError'
+  /api/process-definitions/{processDefinitionKey}/form:
+    parameters:
+      - $ref: '#/components/parameters/ProcessDefinitionKey'
+    get:
+      operationId: getStartForm
+      summary: Get the start-event form schema
+      responses:
+        '200':
+          description: Form schema wrapped as a JSON string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FormSchemaResponse'
+        default:
+          $ref: '#/components/responses/ApiError'
+  /api/user-tasks:
+    post:
+      operationId: searchUserTasks
+      summary: Search user tasks
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserTaskSearchRequest'
+      responses:
+        '200':
+          description: User tasks
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserTaskSearchResponse'
+        default:
+          $ref: '#/components/responses/ApiError'
+  /api/user-tasks/{userTaskKey}/form:
+    parameters:
+      - $ref: '#/components/parameters/UserTaskKey'
+    get:
+      operationId: getUserTaskForm
+      summary: Get a user-task form schema
+      responses:
+        '200':
+          description: Form schema wrapped as a JSON string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FormSchemaResponse'
+        default:
+          $ref: '#/components/responses/ApiError'
+  /api/user-tasks/{userTaskKey}/completion:
+    parameters:
+      - $ref: '#/components/parameters/UserTaskKey'
+    post:
+      operationId: completeUserTask
+      summary: Complete a user task
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompleteUserTaskRequest'
+      responses:
+        '200':
+          description: User task completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmptyObject'
+        default:
+          $ref: '#/components/responses/ApiError'
+  /healthz:
+    get:
+      operationId: healthz
+      summary: Health probe
+      responses:
+        '200':
+          description: BFF is healthy
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: ok
+  /metrics:
+    get:
+      operationId: metrics
+      summary: Prometheus metrics
+      responses:
+        '200':
+          description: Prometheus exposition format
+          content:
+            text/plain:
+              schema:
+                type: string
+components:
+  parameters:
+    ProcessInstanceKey:
+      name: processInstanceKey
+      in: path
+      required: true
+      description: Zeebe process instance key.
+      schema:
+        type: string
+    ProcessDefinitionKey:
+      name: processDefinitionKey
+      in: path
+      required: true
+      description: Zeebe process definition key.
+      schema:
+        type: string
+    UserTaskKey:
+      name: userTaskKey
+      in: path
+      required: true
+      description: Zeebe user task key.
+      schema:
+        type: string
+  responses:
+    ApiError:
+      description: BFF or upstream API error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+  schemas:
+    ApiError:
+      type: object
+      required: [status, code, message]
+      properties:
+        status:
+          type: integer
+          format: int32
+        code:
+          type: string
+          enum: [not_found, bad_request, unauthorized, forbidden, timeout, upstream_error, internal]
+        message:
+          type: string
+    PageRequest:
+      type: object
+      properties:
+        limit:
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 1000
+        after:
+          type: string
+        before:
+          type: string
+    PageResponse:
+      type: object
+      properties:
+        totalItems:
+          type: integer
+          format: int64
+          minimum: 0
+        startCursor:
+          type: string
+        endCursor:
+          type: string
+    SortRequest:
+      type: object
+      required: [field, order]
+      properties:
+        field:
+          type: string
+        order:
+          type: string
+          enum: [asc, desc]
+    ProcessInstanceSearchRequest:
+      type: object
+      required: [filter, sort, page]
+      properties:
+        filter:
+          $ref: '#/components/schemas/ProcessInstanceFilter'
+        sort:
+          type: array
+          items:
+            $ref: '#/components/schemas/SortRequest'
+        page:
+          $ref: '#/components/schemas/PageRequest'
+    ProcessInstanceFilter:
+      type: object
+      properties:
+        processInstanceKey:
+          type: string
+        processDefinitionKey:
+          type: string
+        processDefinitionId:
+          type: string
+        state:
+          type: string
+          enum: [ACTIVE, COMPLETED, TERMINATED]
+        startDate:
+          $ref: '#/components/schemas/DateRange'
+        endDate:
+          $ref: '#/components/schemas/DateRange'
+    DateRange:
+      type: object
+      properties:
+        from:
+          type: string
+          format: date-time
+        to:
+          type: string
+          format: date-time
+    ProcessInstanceSearchResponse:
+      type: object
+      required: [items, page]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProcessInstance'
+        page:
+          $ref: '#/components/schemas/PageResponse'
+    ProcessInstance:
+      type: object
+      required: [processInstanceKey, processDefinitionKey, processDefinitionId, processDefinitionVersion, state, startDate]
+      properties:
+        processInstanceKey:
+          type: string
+        processDefinitionKey:
+          type: string
+        processDefinitionId:
+          type: string
+        processDefinitionName:
+          type: string
+        processDefinitionVersion:
+          type: integer
+          format: int32
+        state:
+          type: string
+          enum: [ACTIVE, COMPLETED, TERMINATED]
+        startDate:
+          type: string
+          format: date-time
+        endDate:
+          type: string
+          format: date-time
+          nullable: true
+        tenantId:
+          type: string
+    StartProcessInstanceRequest:
+      type: object
+      required: [processDefinitionKey, variables]
+      properties:
+        processDefinitionKey:
+          type: string
+        processDefinitionId:
+          type: string
+        version:
+          type: integer
+          format: int32
+        variables:
+          type: object
+          additionalProperties: true
+        tenantId:
+          type: string
+    StartProcessInstanceResponse:
+      type: object
+      required: [processInstanceKey, tenantId]
+      properties:
+        processInstanceKey:
+          type: string
+        tenantId:
+          type: string
+    SequenceFlowSearchResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/SequenceFlow'
+        page:
+          $ref: '#/components/schemas/PageResponse'
+    SequenceFlow:
+      type: object
+      required: [sequenceFlowId, elementId]
+      properties:
+        sequenceFlowId:
+          type: string
+        processInstanceKey:
+          type: string
+        processDefinitionKey:
+          type: string
+        elementId:
+          type: string
+        elementName:
+          type: string
+        startDate:
+          type: string
+          format: date-time
+        endDate:
+          type: string
+          format: date-time
+          nullable: true
+        tenantId:
+          type: string
+    VariableSearchRequest:
+      type: object
+      properties:
+        filter:
+          type: object
+          properties:
+            processInstanceKey:
+              type: string
+            scopeKey:
+              type: string
+            name:
+              type: string
+        page:
+          $ref: '#/components/schemas/PageRequest'
+    VariableSearchResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Variable'
+        page:
+          $ref: '#/components/schemas/PageResponse'
+    Variable:
+      type: object
+      required: [name, value]
+      properties:
+        name:
+          type: string
+        value:
+          type: string
+        scopeKey:
+          type: string
+    ProcessDefinitionSearchRequest:
+      type: object
+      required: [filter, sort, page]
+      properties:
+        filter:
+          $ref: '#/components/schemas/ProcessDefinitionFilter'
+        sort:
+          type: array
+          items:
+            $ref: '#/components/schemas/SortRequest'
+        page:
+          $ref: '#/components/schemas/PageRequest'
+    ProcessDefinitionFilter:
+      type: object
+      properties:
+        key:
+          type: string
+        processDefinitionId:
+          type: string
+        version:
+          type: integer
+          format: int32
+        name:
+          type: string
+        tenantId:
+          type: string
+    ProcessDefinitionSearchResponse:
+      type: object
+      required: [items, page]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProcessDefinition'
+        page:
+          $ref: '#/components/schemas/PageResponse'
+    ProcessDefinition:
+      type: object
+      required: [processDefinitionKey, processDefinitionId, version, resourceName, tenantId, hasStartForm]
+      properties:
+        processDefinitionKey:
+          type: string
+        processDefinitionId:
+          type: string
+        version:
+          type: integer
+          format: int32
+        name:
+          type: string
+        resourceName:
+          type: string
+        tenantId:
+          type: string
+        hasStartForm:
+          type: boolean
+    XmlResponse:
+      type: object
+      required: [xml]
+      properties:
+        xml:
+          type: string
+    FormSchemaResponse:
+      type: object
+      required: [schema]
+      properties:
+        schema:
+          type: string
+          description: JSON-encoded Camunda Form schema.
+    UserTaskSearchRequest:
+      type: object
+      required: [filter, sort, page]
+      properties:
+        filter:
+          $ref: '#/components/schemas/UserTaskFilter'
+        sort:
+          type: array
+          items:
+            $ref: '#/components/schemas/SortRequest'
+        page:
+          $ref: '#/components/schemas/PageRequest'
+    UserTaskFilter:
+      type: object
+      properties:
+        userTaskKey:
+          type: string
+        processInstanceKey:
+          type: string
+        processDefinitionKey:
+          type: string
+        state:
+          type: string
+          enum: [CREATED, COMPLETED, CANCELED]
+        assignee:
+          type: string
+        candidateGroup:
+          type: string
+        candidateUser:
+          type: string
+    UserTaskSearchResponse:
+      type: object
+      required: [items, page]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserTask'
+        page:
+          $ref: '#/components/schemas/PageResponse'
+    UserTask:
+      type: object
+      required: [userTaskKey, processInstanceKey, bpmnProcessId, elementId, name, state, candidateGroups]
+      properties:
+        userTaskKey:
+          type: string
+        processInstanceKey:
+          type: string
+        processDefinitionKey:
+          type: string
+        bpmnProcessId:
+          type: string
+        elementId:
+          type: string
+        name:
+          type: string
+        state:
+          type: string
+          enum: [CREATED, COMPLETED, CANCELED]
+        candidateGroups:
+          type: array
+          items:
+            type: string
+        candidateUsers:
+          type: array
+          items:
+            type: string
+        assignee:
+          type: string
+          nullable: true
+        creationDate:
+          type: string
+          format: date-time
+        completionDate:
+          type: string
+          format: date-time
+          nullable: true
+        tenantId:
+          type: string
+    CompleteUserTaskRequest:
+      type: object
+      required: [variables]
+      properties:
+        variables:
+          type: object
+          additionalProperties: true
+        tenantId:
+          type: string
+    EmptyObject:
+      type: object
+      additionalProperties: false

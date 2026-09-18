@@ -119,14 +119,6 @@ orchestration:
                 admin:
                     users:
                         - admin
-            authorizations:
-                - ownerType: CLIENT
-                  ownerId: zeebe-cli
-                  resourceType: RESOURCE
-                  resourceId: '*'
-                  permissions:
-                      - CREATE
-                      - READ
 
 console:
     enabled: true

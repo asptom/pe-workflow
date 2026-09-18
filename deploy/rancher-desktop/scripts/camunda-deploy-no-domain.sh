@@ -49,8 +49,50 @@ fi
 
 # ---- Defaults ----
 CAMUNDA_NAMESPACE="${CAMUNDA_NAMESPACE:-camunda}"
-CAMUNDA_HELM_CHART_VERSION="${CAMUNDA_HELM_CHART_VERSION:-14.6.1}"
 CAMUNDA_RELEASE_NAME="${CAMUNDA_RELEASE_NAME:-camunda}"
+
+# ---- Flags ----
+SKIP_C8CTL_CONFIG=false
+CHECK_VERSIONS=false
+
+usage() {
+  cat <<'EOF'
+Usage: camunda-deploy-no-domain.sh [--check-versions] [--skip-c8ctl-config]
+
+  --check-versions      Print pinned component versions and exit
+  --skip-c8ctl-config   Do not run configure-c8ctl.sh (Step 7)
+  -h, --help            Show this help
+
+Environment variables:
+  CAMUNDA_NAMESPACE, CAMUNDA_RELEASE_NAME, CAMUNDA_HELM_CHART_VERSION,
+  ECK_VERSION, CNPG_VERSION, KEYCLOAK_VERSION
+EOF
+}
+
+for arg in "$@"; do
+  case "$arg" in
+    --check-versions) CHECK_VERSIONS=true ;;
+    --skip-c8ctl-config) SKIP_C8CTL_CONFIG=true ;;
+    -h|--help) usage; exit 0 ;;
+    *) echo "unknown option: $arg" >&2; usage >&2; exit 1 ;;
+  esac
+done
+
+# ---- Pinned versions (single source of truth) ----
+# Keep the chart version in sync with deploy/rancher-desktop/README.md.
+CAMUNDA_HELM_CHART_VERSION="${CAMUNDA_HELM_CHART_VERSION:-14.6.1}"
+ECK_VERSION="${ECK_VERSION:-3.4.1}"
+CNPG_VERSION="${CNPG_VERSION:-1.30.0}"
+KEYCLOAK_VERSION="${KEYCLOAK_VERSION:-26.3.2}"
+
+if $CHECK_VERSIONS; then
+  echo "Pinned versions:"
+  echo "  camunda-platform chart: $CAMUNDA_HELM_CHART_VERSION"
+  echo "  ECK operator:           $ECK_VERSION"
+  echo "  CloudNativePG operator: $CNPG_VERSION"
+  echo "  Keycloak operator:      $KEYCLOAK_VERSION"
+  exit 0
+fi
 
 echo "=============================================="
 echo " Camunda Platform Full Deployment (No-Domain)"
@@ -83,8 +125,6 @@ echo "=== Step 2/7: Elasticsearch (ECK operator) ==="
 ES_NAMESPACE="${ES_NAMESPACE:-elastic-system}"
 ES_CLUSTER_FILE="${ES_CLUSTER_FILE:-$MANIFESTS_DIR/elasticsearch/elasticsearch-cluster.yml}"
 
-ECK_VERSION="3.4.1"
-
 # Install ECK operator CRDs
 kubectl apply --server-side -f \
   "https://download.elastic.co/downloads/eck/${ECK_VERSION}/crds.yaml"
@@ -112,7 +152,6 @@ echo "Elasticsearch is ready"
 echo ""
 echo "=== Step 3/7: PostgreSQL (CloudNativePG operator) ==="
 CNPG_NAMESPACE="${CNPG_NAMESPACE:-cnpg-system}"
-CNPG_VERSION="1.30.0"
 
 CNPG_MANIFEST_URL="https://raw.githubusercontent.com/cloudnative-pg/cloudnative-pg/release-${CNPG_VERSION%.*}/releases/cnpg-${CNPG_VERSION}.yaml"
 
@@ -146,7 +185,6 @@ echo "PostgreSQL clusters are ready"
 # ============================================================
 echo ""
 echo "=== Step 4/7: Keycloak (Keycloak operator) ==="
-KEYCLOAK_VERSION="26.3.2"
 
 # Install Keycloak operator CRDs
 kubectl apply --server-side -f \
@@ -236,7 +274,11 @@ echo ""
 echo "=== Step 7/7: Configuring c8ctl ==="
 
 # Check if c8ctl is installed
-if ! command -v c8ctl &>/dev/null; then
+if $SKIP_C8CTL_CONFIG; then
+  echo "Skipping c8ctl configuration (--skip-c8ctl-config)."
+  echo "         Run it later: $SCRIPT_DIR/configure-c8ctl.sh --namespace $CAMUNDA_NAMESPACE --release-name $CAMUNDA_RELEASE_NAME"
+  echo ""
+elif ! command -v c8ctl &>/dev/null; then
   echo "WARNING: c8ctl is not installed. Skipping c8ctl configuration."
   echo "         Install it with: npm install -g @camunda8/cli"
   echo "         Then run: $SCRIPT_DIR/configure-c8ctl.sh"

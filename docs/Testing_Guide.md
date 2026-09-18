@@ -76,8 +76,9 @@ Or just `./deploy/services/build-deploy.sh --resources`.
 
 ## 2. The simulator
 
-`pe-simulator` (`:8086`) runs two job workers that replace external-party wait times
-with short random outcomes:
+`pe-simulator` (`:8086` in-cluster; exposed at `http://localhost:8186` when port-forwards
+are running) runs two job workers that replace external-party wait times with short random
+outcomes:
 
 | Job type | Completes with | Default behavior |
 |---|---|---|
