@@ -6,12 +6,12 @@
 
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 cd "$ROOT"
 
 SERVICES="eligibility verification scheduling documents notifications simulator"
 TAG="latest"
-PROFILE="rancher-desktop"
+PROFILE="kubernetes"
 DO_SERVICES=false
 DO_RESOURCES=false
 HAS_FLAG=false
@@ -23,7 +23,7 @@ Usage: build-deploy.sh [--services] [--resources] [--tag <tag>] [--profile <name
   --services          Build images, kubectl apply manifests, rollout status (default if no flags)
   --resources         Deploy workflow resources (forms, DMN, shared, delegates, orchestrator) via c8ctl
   --tag <tag>         Image tag to build (default: latest)
-  --profile <name>    c8ctl profile to use (default: rancher-desktop)
+  --profile <name>    c8ctl profile to use (default: kubernetes)
   -h, --help          Show this help
 
 Examples:
@@ -51,7 +51,7 @@ fi
 
 # ---------------------------------------------------------------------------
 # Temporary port-forwards for c8ctl resource deployment.
-# The rancher-desktop profile fetches an OAuth token from Keycloak on
+# The kubernetes profile fetches an OAuth token from Keycloak on
 # localhost:18080 and calls the REST API on the Zeebe gateway at
 # localhost:8080, so both must be reachable. If a forward is already running
 # we reuse it; otherwise we start one and tear it down on exit.
@@ -114,10 +114,10 @@ wait_for_zeebe() {
 
 if $DO_SERVICES; then
   for svc in $SERVICES; do
-    docker build --build-arg SERVICE="$svc" -t "pe-workflow/$svc:$TAG" -f "$ROOT/deploy/services/Dockerfile" "$ROOT"
+    docker build --build-arg SERVICE="$svc" -t "pe-workflow/$svc:$TAG" -f "$ROOT/scripts/deploy/services/Dockerfile" "$ROOT"
   done
 
-  kubectl apply -f "$ROOT/deploy/services/manifests.yaml"
+  kubectl apply -f "$ROOT/scripts/deploy/services/manifests.yaml"
 
   # Images are tagged :latest and manifests are unchanged across rebuilds, so a
   # plain apply does not restart existing pods. Force a rollout so the freshly

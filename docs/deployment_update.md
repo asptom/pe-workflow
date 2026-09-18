@@ -1,3 +1,5 @@
+> **Note:** filesystem paths in this historical plan were updated after the `scripts/` directory restructuring; see [`dir_structure.md`](dir_structure.md).
+
 # Deployment Update Plan
 
 Consolidate all deployment into shell scripts, eliminate the Makefile, fix existing issues, and produce a single authoritative `DEPLOYMENT.md`.
@@ -11,12 +13,12 @@ Deployment is split across **two mechanisms** with overlapping responsibilities:
 | Mechanism | What it does | Location |
 |-----------|-------------|----------|
 | **Makefile** (3 targets) | `build-web` — runs `npm ci && npm run build` in `web/`<br>`docker-webapp` — builds the Go BFF + Angular SPA Docker image<br>`deploy-webapp` — applies k8s manifests, restarts `pe-webapp` deployment | `/Makefile` (12 lines) |
-| **Shell scripts** (6 scripts) | `camunda-deploy-no-domain.sh` — deploys Camunda platform stack (Elasticsearch, PostgreSQL, Keycloak, Helm chart)<br>`configure-c8ctl.sh` — creates OIDC client, c8tl profile, Zeebe authorizations<br>`camunda-port-forwards.sh` — starts 8 port-forward processes<br>`build-deploy.sh` — builds 6 Go service Docker images, applies manifests, rollout restarts per deployment<br>`camunda-uninstall.sh` — deletes namespaces (incomplete cleanup)<br>`set-secrets.sh` — creates PostgreSQL secrets | `deploy/rancher-desktop/scripts/` and `deploy/services/` |
+| **Shell scripts** (6 scripts) | `camunda-deploy-no-domain.sh` — deploys Camunda platform stack (Elasticsearch, PostgreSQL, Keycloak, Helm chart)<br>`configure-c8ctl.sh` — creates OIDC client, c8tl profile, Zeebe authorizations<br>`camunda-port-forwards.sh` — starts 8 port-forward processes<br>`build-deploy.sh` — builds 6 Go service Docker images, applies manifests, rollout restarts per deployment<br>`scripts/uninstall.sh` — deletes namespaces (incomplete cleanup)<br>`set-secrets.sh` — creates PostgreSQL secrets | `scripts/deploy/camunda/scripts/` and `scripts/deploy/services/` |
 
 **Inconsistencies:**
 - The Makefile handles webapp build/deploy while shell scripts handle everything else. There is no single entry point to deploy the full stack.
 - The README.md references `make build-web`, `make docker-webapp`, and `make deploy-webapp` directly — these targets duplicate logic already in shell scripts.
-- The root README.md, `deploy/rancher-desktop/README.md`, and `docs/Deployment_Guide.md` each cover different parts of deployment with no single source of truth.
+- The root README.md, `scripts/deploy/camunda/README.md`, and `docs/Deployment_Guide.md` each cover different parts of deployment with no single source of truth.
 - `docs/Deployment_Guide.md` covers workflow artifact deployment (forms, DMN, BPMN) — a subset of what `build-deploy.sh --resources` already does.
 
 **Critical port-forward behavior:** Port-forwards started by `camunda-port-forwards.sh` are child processes of the script. When the script exits (Ctrl+C or normal termination), all port-forwards are killed. They do **not** survive after the script ends. This is why you run them separately — to keep them alive independently of any deployment or management script.
@@ -37,20 +39,20 @@ Before creating the unified script, fix the issues in existing scripts so they a
 
 #### 1a. Fix port-forward collision (8086)
 
-**File:** `deploy/rancher-desktop/scripts/camunda-port-forwards.sh` (update)
+**File:** `scripts/deploy/camunda/scripts/camunda-port-forwards.sh` (update)
 
 The simulator service (`pe-simulator`) and the Camunda Connectors component both map to `localhost:8086` when port-forwarded simultaneously. The simulator is a user-deployed service; Connectors is part of the Camunda Helm chart.
 
 **Fix:** Change the simulator port-forward to use `8186` instead of `8086`. The simulator's in-cluster Service already exposes port 8086 internally — the port-forward only maps to localhost. Update:
 - The `kubectl port-forward` line for `pe-simulator` from `8086:8086` to `8186:8086`.
-- The README.md access URLs table (both root and `deploy/rancher-desktop/README.md`) to show simulator at `localhost:8186`.
+- The README.md access URLs table (both root and `scripts/deploy/camunda/README.md`) to show simulator at `localhost:8186`.
 - Any documentation or scripts referencing the simulator port.
 
 This is a non-breaking change for in-cluster communication (services talk to `pe-simulator:8086` internally). Only localhost access changes.
 
 #### 1b. Fix incomplete uninstall script
 
-**File:** `deploy/rancher-desktop/scripts/camunda-uninstall.sh` (update)
+**File:** `scripts/uninstall.sh` (update)
 
 The current script only deletes namespaces (`elastic-system`, `cnpg-system`, `camunda`). It does not uninstall Helm releases or operator CRDs. On re-deployment, orphaned Helm releases with stale values cause conflicts.
 
@@ -73,7 +75,7 @@ The CRD deletion lines are commented by default. Add a `--full` flag to uncommen
 
 #### 1c. Remove dead authorization initializer from Helm values
 
-**File:** `deploy/rancher-desktop/helm-values/values-no-domain.yml` (update)
+**File:** `scripts/deploy/camunda/helm-values/values-no-domain.yml` (update)
 
 The Helm chart declares an authorization initializer for the `zeebe-cli` client, but this initializer only runs at first startup — before the `zeebe-cli` client exists (it is created by `configure-c8ctl.sh`). The authorization config in the Helm values is therefore dead code; `configure-c8ctl.sh` recreates all authorizations via the REST API on every run.
 
@@ -81,7 +83,7 @@ The Helm chart declares an authorization initializer for the `zeebe-cli` client,
 
 #### 1d. Pin Helm chart and operator versions consistently
 
-**File:** `deploy/rancher-desktop/scripts/camunda-deploy-no-domain.sh` (update)
+**File:** `scripts/deploy/camunda/scripts/camunda-deploy-no-domain.sh` (update)
 
 Helm chart version (`14.6.1`) and operator versions (ECK `3.4.1`, CNPG `1.30.0`) are embedded directly in the script. If another script or documentation references different versions, upgrades become error-prone.
 
@@ -91,29 +93,29 @@ Helm chart version (`14.6.1`) and operator versions (ECK `3.4.1`, CNPG `1.30.0`)
 
 ### Phase 2: Create the unified deployment script
 
-**File:** `deploy/deploy.sh` (new)
+**File:** `scripts/deploy.sh` (new)
 
 A single entry-point shell script that orchestrates the entire deployment in order. This script calls existing scripts (now fixed) and wraps Makefile logic as shell commands.
 
-**Critical design decision: Port-forwards are NOT started by this script.** Because port-forwards die when the script exits (they are foreground child processes), `deploy/deploy.sh` does NOT start them. Users must start port-forwards separately before running any c8ctl commands (which is the current workflow).
+**Critical design decision: Port-forwards are NOT started by this script.** Because port-forwards die when the script exits (they are foreground child processes), `scripts/deploy.sh` does NOT start them. Users must start port-forwards separately before running any c8ctl commands (which is the current workflow).
 
 **What it does (in order):**
 
 1. **Prerequisites check** — verifies `kubectl`, `docker`, `helm`, `c8ctl`, `envsubst`, `yq`, `openssl` are available. Exits with a clear error if any are missing.
 
-2. **Deploy Camunda platform** — calls `deploy/rancher-desktop/scripts/camunda-deploy-no-domain.sh` (now with fixed uninstall and version pinning).
+2. **Deploy Camunda platform** — calls `scripts/deploy/camunda/scripts/camunda-deploy-no-domain.sh` (now with fixed uninstall and version pinning).
 
-3. **Configure c8ctl** — calls `deploy/rancher-desktop/scripts/configure-c8ctl.sh` (now with dead code removed from Helm values).
+3. **Configure c8ctl** — calls `scripts/deploy/camunda/scripts/configure-c8ctl.sh` (now with dead code removed from Helm values).
 
-4. **Deploy worker services** — calls `deploy/services/build-deploy.sh --services` (existing script, no changes needed).
+4. **Deploy worker services** — calls `scripts/deploy/services/build-deploy.sh --services` (existing script, no changes needed).
 
-5. **Deploy workflow resources** — calls `deploy/services/build-deploy.sh --resources` (existing script, no changes needed).
+5. **Deploy workflow resources** — calls `scripts/deploy/services/build-deploy.sh --resources` (existing script, no changes needed).
 
 6. **Build and deploy webapp** — replaces the 3 Makefile targets (`build-web`, `docker-webapp`, `deploy-webapp`) with inline shell commands:
    ```bash
    cd web && npm ci && npm run build
-   docker build --build-arg SERVICE=webapp -t pe-workflow/webapp:latest -f deploy/services/Dockerfile .
-   kubectl apply -f deploy/services/manifests.yaml
+   docker build --build-arg SERVICE=webapp -t pe-workflow/webapp:latest -f scripts/deploy/services/Dockerfile .
+   kubectl apply -f scripts/deploy/services/manifests.yaml
    kubectl rollout restart deployment/pe-webapp -n camunda
    kubectl rollout status deployment/pe-webapp -n camunda --timeout=180s
    ```
@@ -134,7 +136,7 @@ A comprehensive, single-source-of-truth document describing every step to deploy
 
 1. **Overview** — What this project deploys (Camunda 8 platform, Go microservices, Angular SPA via Go BFF).
 2. **Prerequisites** — All tools required (Rancher Desktop k3s, Docker, kubectl, helm, envsubst, yq, openssl, c8ctl, Node.js 20+, Go).
-3. **Quick Start** — Two commands: start port-forwards, then run `./deploy/deploy.sh --all`.
+3. **Quick Start** — Two commands: start port-forwards, then run `./scripts/deploy.sh --all`.
 4. **Detailed Deployment Steps** — Each step with explanation:
    - Step 1: Start port-forwards (separate terminal, keep running)
    - Step 2: Deploy Camunda Platform (operators, Elasticsearch, PostgreSQL, Keycloak, Helm chart)
@@ -147,12 +149,12 @@ A comprehensive, single-source-of-truth document describing every step to deploy
 7. **Partial Deployment** — How to deploy individual components using flags (`--platform`, `--services`, `--resources`, `--webapp`).
 8. **Local Development** — How to run the BFF locally and Angular separately (from root README.md).
 9. **Playwright Tests** — How to run tests (from root README.md, condensed).
-10. **Cleanup / Uninstall** — How to tear down the deployment (`deploy/rancher-desktop/scripts/camunda-uninstall.sh`), including the `--full` flag for complete reset.
+10. **Cleanup / Uninstall** — How to tear down the deployment (`scripts/uninstall.sh`), including the `--full` flag for complete reset.
 11. **Known Cluster Behavior** — Zeebe customHeaders bug, ghost-activated jobs (from root README.md).
 
 This document replaces the deployment content currently scattered across:
 - Root `README.md` (Quick Start, Local Development, Playwright tests, Known cluster behavior)
-- `deploy/rancher-desktop/README.md` (Camunda platform deployment, c8ctl config, access URLs, admin credentials)
+- `scripts/deploy/camunda/README.md` (Camunda platform deployment, c8ctl config, access URLs, admin credentials)
 - `docs/Deployment_Guide.md` (workflow artifact deployment order and verification)
 
 ---
@@ -167,10 +169,10 @@ The root README should be a concise project overview that **references** `DEPLOY
 - Replace the "Quick Start" section with a short paragraph pointing to `DEPLOYMENT.md` for full deployment instructions, plus the two commands:
   ```bash
   # Terminal 1: Start port-forwards (keep running)
-  ./deploy/rancher-desktop/scripts/camunda-port-forwards.sh
+  ./scripts/deploy/camunda/scripts/camunda-port-forwards.sh
 
   # Terminal 2: Deploy everything
-  ./deploy/deploy.sh --all
+  ./scripts/deploy.sh --all
   ```
 - Keep the "Local development" section but shorten it to reference `DEPLOYMENT.md` for details.
 - Keep the "Playwright tests" section but shorten it to reference `DEPLOYMENT.md` for details.
@@ -188,7 +190,7 @@ The following files contain deployment-relevant content that will be **consolida
 
 | File | Action | Reason |
 |------|--------|--------|
-| `deploy/rancher-desktop/README.md` | **Update** to a short reference pointing to root `DEPLOYMENT.md`. Keep the directory structure (manifests, Helm values) as-is since it may be copied to other projects. The README should say: "For deployment instructions, see the root `DEPLOYMENT.md`." | Its full content is absorbed into `DEPLOYMENT.md`. The directory itself (manifests + Helm values) remains useful as a standalone Camunda deployment template. |
+| `scripts/deploy/camunda/README.md` | **Update** to a short reference pointing to root `DEPLOYMENT.md`. Keep the directory structure (manifests, Helm values) as-is since it may be copied to other projects. The README should say: "For deployment instructions, see the root `DEPLOYMENT.md`." | Its full content is absorbed into `DEPLOYMENT.md`. The directory itself (manifests + Helm values) remains useful as a standalone Camunda deployment template. |
 | `docs/Deployment_Guide.md` | **Remove** | Its content (artifact inventory, deployment order for workflow resources) is absorbed into `DEPLOYMENT.md` under "Step 5: Deploy workflow resources" and the artifact inventory table. |
 | `docs/Testing_Guide.md` | **Keep** (no change) | This covers test scenarios, not deployment. It is orthogonal to the deployment consolidation. Reference it from `DEPLOYMENT.md` in a "Testing" section. |
 
@@ -198,7 +200,7 @@ The following files contain deployment-relevant content that will be **consolida
 
 **File:** `/Makefile` (delete)
 
-Once `deploy/deploy.sh` exists and all references to `make build-web`, `make docker-webapp`, and `make deploy-webapp` are removed from documentation, delete the Makefile.
+Once `scripts/deploy.sh` exists and all references to `make build-web`, `make docker-webapp`, and `make deploy-webapp` are removed from documentation, delete the Makefile.
 
 Verify no other scripts or CI/CD configurations reference `make` before deleting:
 - Search for `make build-web`, `make docker-webapp`, `make deploy-webapp` across the codebase.
@@ -210,8 +212,8 @@ Verify no other scripts or CI/CD configurations reference `make` before deleting
 
 Ensure all scripts that reference deployment steps or URLs are consistent with the changes:
 
-- `deploy/rancher-desktop/scripts/camunda-port-forwards.sh` — simulator port changed to 8186 (Phase 1a).
-- `deploy/rancher-desktop/README.md` — access URLs table updated to show simulator at 8186 (Phase 5).
+- `scripts/deploy/camunda/scripts/camunda-port-forwards.sh` — simulator port changed to 8186 (Phase 1a).
+- `scripts/deploy/camunda/README.md` — access URLs table updated to show simulator at 8186 (Phase 5).
 - Root `README.md` — microservices table updated to show simulator at 8186 (Phase 4).
 - Any Playwright test configuration referencing the simulator port — update to 8186.
 
@@ -219,12 +221,12 @@ Ensure all scripts that reference deployment steps or URLs are consistent with t
 
 ### Phase 8: Verify and test
 
-1. Run `./deploy/deploy.sh --all` end-to-end on a fresh cluster to verify the script works.
+1. Run `./scripts/deploy.sh --all` end-to-end on a fresh cluster to verify the script works.
 2. Verify `DEPLOYMENT.md` instructions match what the script actually does — a reader should be able to follow `DEPLOYMENT.md` without reading the script source.
 3. Verify the updated README.md is clear and points to `DEPLOYMENT.md` correctly.
 4. Verify no remaining references to `make` exist in documentation or scripts.
 5. Verify port-forward collision is resolved (simulator accessible at 8186, connectors at 8086).
-6. Verify `camunda-uninstall.sh --full` properly cleans up Helm releases and CRDs.
+6. Verify `scripts/uninstall.sh --full` properly cleans up Helm releases and CRDs.
 7. Verify re-deployment after uninstall works without conflicts (no stale Helm releases or authorization config).
 
 ---
@@ -233,15 +235,15 @@ Ensure all scripts that reference deployment steps or URLs are consistent with t
 
 | File | Action |
 |------|--------|
-| `deploy/deploy.sh` (new) | Unified deployment script — single entry point for all deployment steps. Replaces Makefile targets and coordinates existing scripts. Does NOT manage port-forwards (they must be started separately). |
+| `scripts/deploy.sh` (new) | Unified deployment script — single entry point for all deployment steps. Replaces Makefile targets and coordinates existing scripts. Does NOT manage port-forwards (they must be started separately). |
 | `DEPLOYMENT.md` (new) | Single source of truth for deployment — comprehensive guide covering all steps, access URLs, admin credentials, local development, testing, and cleanup. |
 | `README.md` (update) | Condensed project overview with references to `DEPLOYMENT.md`. Removes all `make` references. Updates simulator port to 8186. |
-| `deploy/rancher-desktop/README.md` (update) | Shortened to a reference pointing to root `DEPLOYMENT.md`. Directory structure (manifests, Helm values) preserved. |
-| `deploy/rancher-desktop/scripts/camunda-port-forwards.sh` (update) | Simulator port-forward changed from 8086 to 8186 to resolve collision with Connectors. |
-| `deploy/rancher-desktop/scripts/camunda-uninstall.sh` (update) | Added Helm release uninstallation and optional `--full` flag for CRD cleanup. |
-| `deploy/rancher-desktop/helm-values/values-no-domain.yml` (update) | Removed dead authorization initializer block. |
+| `scripts/deploy/camunda/README.md` (update) | Shortened to a reference pointing to root `DEPLOYMENT.md`. Directory structure (manifests, Helm values) preserved. |
+| `scripts/deploy/camunda/scripts/camunda-port-forwards.sh` (update) | Simulator port-forward changed from 8086 to 8186 to resolve collision with Connectors. |
+| `scripts/uninstall.sh` (update) | Added Helm release uninstallation and optional `--full` flag for CRD cleanup. |
+| `scripts/deploy/camunda/helm-values/values-no-domain.yml` (update) | Removed dead authorization initializer block. |
 | `docs/Deployment_Guide.md` (remove) | Content absorbed into `DEPLOYMENT.md`. |
-| `Makefile` (delete) | No longer needed — all logic moved to `deploy/deploy.sh`. |
+| `Makefile` (delete) | No longer needed — all logic moved to `scripts/deploy.sh`. |
 | `docs/Testing_Guide.md` (keep) | Unchanged — covers test scenarios, not deployment. |
 
 ---
@@ -251,7 +253,7 @@ Ensure all scripts that reference deployment steps or URLs are consistent with t
 | Issue | Fix | Phase |
 |-------|-----|-------|
 | **Port-forward collision** (8086: Connectors vs simulator) | Simulator port-forward changed to 8186 in `camunda-port-forwards.sh`. All docs updated. | 1a, 4, 5, 7 |
-| **Incomplete uninstall** (Helm releases and CRDs orphaned) | `camunda-uninstall.sh` now uninstalls Helm releases before namespace deletion. Added `--full` flag for CRD cleanup. | 1b, 3, 8 |
+| **Incomplete uninstall** (Helm releases and CRDs orphaned) | `scripts/uninstall.sh` now uninstalls Helm releases before namespace deletion. Added `--full` flag for CRD cleanup. | 1b, 3, 8 |
 | **Dead authorization initializer** (Helm values config never takes effect) | Removed from `values-no-domain.yml`. Authorizations correctly created by `configure-c8ctl.sh` via REST API. | 1c, 8 |
-| **Port-forwards die when script exits** (critical design constraint) | `deploy/deploy.sh` explicitly does NOT start port-forwards. Documentation clearly states they must be started separately and kept running. | 2, 3, 4 |
-| **No single deployment entry point** | `deploy/deploy.sh` provides a single command (`--all`) for full deployment, with flags for partial deployment. | 2, 3, 4 |
+| **Port-forwards die when script exits** (critical design constraint) | `scripts/deploy.sh` explicitly does NOT start port-forwards. Documentation clearly states they must be started separately and kept running. | 2, 3, 4 |
+| **No single deployment entry point** | `scripts/deploy.sh` provides a single command (`--all`) for full deployment, with flags for partial deployment. | 2, 3, 4 |

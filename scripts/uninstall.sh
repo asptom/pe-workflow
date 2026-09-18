@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # ============================================================
-# camunda-uninstall.sh — tear down the local Camunda platform deployment.
+# uninstall.sh — tear down the local Camunda platform deployment.
 #
 # Usage:
-#   camunda-uninstall.sh          # uninstall the Helm release + delete namespaces
-#   camunda-uninstall.sh --full   # also delete operator CRDs (complete reset)
+#   uninstall.sh          # uninstall the Helm release + delete namespaces
+#   uninstall.sh --full   # also delete operator CRDs (complete reset)
 #
 # Environment variables (all optional):
 #   CAMUNDA_NAMESPACE    - Camunda namespace              (default: camunda)
@@ -28,7 +28,7 @@ CNPG_NAMESPACE="${CNPG_NAMESPACE:-cnpg-system}"
 FULL=false
 usage() {
   cat <<'EOF'
-Usage: camunda-uninstall.sh [--full]
+Usage: uninstall.sh [--full]
 
   --full         Also delete operator CRDs (complete reset)
   -h, --help     Show this help

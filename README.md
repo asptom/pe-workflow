@@ -10,7 +10,8 @@ Enrollment workflow modeling and local deployment for Camunda 8.
 - `services/` — Go microservices, one binary per service, each running Camunda 8 job workers for the combined workflows
   - `cmd/` — eligibility, verification, scheduling, documents, notifications, simulator, webapp
   - `internal/zeebeworker/` — shared Zeebe client bootstrap and job-handling helpers
-- `deploy/` — deployment scripts, Helm values, Kubernetes manifests, and the unified `deploy.sh`
+- `scripts/` — deployment scripts, Helm values, Kubernetes manifests, and the unified `deploy.sh`
+- `web/tests/` — Playwright end-to-end tests for the Angular SPA and Go BFF
 - `docs/` — testing guide and implementation plans
 
 ## Quick Start
@@ -19,10 +20,10 @@ Enrollment workflow modeling and local deployment for Camunda 8.
 
 ```bash
 # Deploy the full stack (no port-forwards needed during deploy)
-./deploy/deploy.sh --all
+./scripts/deploy.sh --all
 
 # In a separate terminal, start port-forwards for interactive use
-./deploy/rancher-desktop/scripts/camunda-port-forwards.sh
+./scripts/deploy/camunda/scripts/camunda-port-forwards.sh
 ```
 
 Open the application at <http://localhost:8088>. See `DEPLOYMENT.md` for prerequisites,
@@ -47,9 +48,9 @@ from [`docs/Testing_Guide.md`](docs/Testing_Guide.md):
 ```bash
 c8ctl create pi --id Enrollment_Orchestrator \
   --variables '{"provider":{"enrollmentType":"855I","legalName":"Jane Doe MD","npi":"1234567893","tin":"123456789","filingDate":"2026-07-01"},"submissionMethod":"PECOS"}' \
-  --profile=rancher-desktop
+  --profile=kubernetes
 
-c8ctl watch --profile=rancher-desktop
+c8ctl watch --profile=kubernetes
 ```
 
 `docs/Testing_Guide.md` covers all scenarios (855I, 855A, 855B, EXCLUDED, CONDITIONAL),

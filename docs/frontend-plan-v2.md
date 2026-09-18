@@ -1,3 +1,5 @@
+> **Note:** filesystem paths in this historical plan were updated after the `scripts/` directory restructuring; see [`dir_structure.md`](dir_structure.md).
+
 # Angular SPA + Go BFF Front‑end Architecture
 
 ## 1. Goal
@@ -160,7 +162,7 @@ CMD ["/app/webapp"]
 - Image tagged with Git SHA or `latest` for local dev.
 
 ### 5.2 Helm Values
-Add a section in `deploy/rancher-desktop/helm-values/values-no-domain.yml`:
+Add a section in `scripts/deploy/camunda/helm-values/values-no-domain.yml`:
 ```yaml
 bff:
   image:
@@ -199,7 +201,7 @@ bff:
 
 ### 6.1 Test Structure
 ```
-playwright-tests/
+web/tests/
 ├─ e2e/
 │  ├─ start-process.spec.ts
 │  ├─ view-diagram.spec.ts

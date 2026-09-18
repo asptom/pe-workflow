@@ -27,7 +27,7 @@ export default defineConfig({
   ],
   webServer: {
     command:
-      'ZEEBE_REST_ADDRESS=http://localhost:8080 ZEEBE_AUTHORIZATION_SERVER_URL=http://localhost:18080/auth/realms/camunda-platform/protocol/openid-connect/token BFF_ADDR=:8088 go run ../services/cmd/webapp',
+      'ZEEBE_REST_ADDRESS=http://localhost:8080 ZEEBE_AUTHORIZATION_SERVER_URL=http://localhost:18080/auth/realms/camunda-platform/protocol/openid-connect/token BFF_ADDR=:8088 go run ../../services/cmd/webapp',
     port: 8088,
     reuseExistingServer: true,
     timeout: 180_000,

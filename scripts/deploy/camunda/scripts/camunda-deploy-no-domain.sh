@@ -15,7 +15,7 @@ set -euo pipefail
 #   7. c8ctl profile configuration (Keycloak OIDC client + c8ctl profile)
 #
 # This script is self-contained: all referenced manifests and values
-# files live under rancher-desktop/manifests/ and rancher-desktop/helm-values/.
+# files live under camunda/manifests/ and camunda/helm-values/.
 #
 # Prerequisites:
 #   - kubectl connected to your k3s cluster
@@ -31,13 +31,13 @@ set -euo pipefail
 # ============================================================
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-RANCHER_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-MANIFESTS_DIR="$RANCHER_DIR/manifests"
+CAMUNDA_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+MANIFESTS_DIR="$CAMUNDA_DIR/manifests"
 
 # ---- Source environment (if available) ----
 ENV_FILE=""
-if [ -f "$RANCHER_DIR/../env_exports.sh" ]; then
-  ENV_FILE="$RANCHER_DIR/../env_exports.sh"
+if [ -f "$CAMUNDA_DIR/../../../env_exports.sh" ]; then
+  ENV_FILE="$CAMUNDA_DIR/../../../env_exports.sh"
 elif [ -f "$SCRIPT_DIR/env_exports.sh" ]; then
   ENV_FILE="$SCRIPT_DIR/env_exports.sh"
 fi
@@ -79,7 +79,7 @@ for arg in "$@"; do
 done
 
 # ---- Pinned versions (single source of truth) ----
-# Keep the chart version in sync with deploy/rancher-desktop/README.md.
+# Keep the chart version in sync with scripts/deploy/camunda/README.md.
 CAMUNDA_HELM_CHART_VERSION="${CAMUNDA_HELM_CHART_VERSION:-14.6.1}"
 ECK_VERSION="${ECK_VERSION:-3.4.1}"
 CNPG_VERSION="${CNPG_VERSION:-1.30.0}"
@@ -263,7 +263,7 @@ helm upgrade --install "$CAMUNDA_RELEASE_NAME" camunda-platform \
   --values "$MANIFESTS_DIR/keycloak/camunda-keycloak-no-domain-values.yml" \
   --values "$MANIFESTS_DIR/postgresql/camunda-identity-values.yml" \
   --values "$MANIFESTS_DIR/postgresql/camunda-webmodeler-values.yml" \
-  --values "$RANCHER_DIR/helm-values/values-no-domain.yml"
+  --values "$CAMUNDA_DIR/helm-values/values-no-domain.yml"
 
 echo "Camunda Platform Helm release installed."
 
@@ -333,9 +333,9 @@ echo "  kubectl get secret camunda-credentials -n $CAMUNDA_NAMESPACE \\"
 echo "    -o jsonpath='{.data.identity-first-user-password}' | base64 -d"
 echo ""
 echo "=== c8ctl usage ==="
-echo "  c8ctl get topology --profile=rancher-desktop"
-echo "  c8ctl list pd --profile=rancher-desktop"
-echo "  c8ctl list pi --profile=rancher-desktop"
-echo "  c8ctl deploy ./my-process.bpmn --profile=rancher-desktop"
+echo "  c8ctl get topology --profile=kubernetes"
+echo "  c8ctl list pd --profile=kubernetes"
+echo "  c8ctl list pi --profile=kubernetes"
+echo "  c8ctl deploy ./my-process.bpmn --profile=kubernetes"
 echo ""
 echo "  (Requires port-forwards for Keycloak:18080 and Zeebe gateway:8080 to be running)"

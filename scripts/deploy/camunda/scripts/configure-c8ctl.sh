@@ -40,7 +40,7 @@ KEYCLOAK_ADMIN_USER="${KEYCLOAK_ADMIN_USER:-temp-admin}"
 IDENTITY_ADMIN_USER="${IDENTITY_ADMIN_USER:-admin}"
 OIDC_CLIENT_ID="zeebe-cli"
 OIDC_CLIENT_NAME="c8ctl CLI Client"
-C8CTL_PROFILE_NAME="${C8CTL_PROFILE_NAME:-rancher-desktop}"
+C8CTL_PROFILE_NAME="${C8CTL_PROFILE_NAME:-kubernetes}"
 
 # ---- Parse arguments ----
 while [[ $# -gt 0 ]]; do
@@ -66,7 +66,7 @@ while [[ $# -gt 0 ]]; do
       shift 2
       ;;
     --help|-h)
-      echo "Usage: $0 [--namespace camunda] [--release-name camunda] [--keycloak-port 18080] [--zeebe-port 8080] [--profile-name rancher-desktop]"
+      echo "Usage: $0 [--namespace camunda] [--release-name camunda] [--keycloak-port 18080] [--zeebe-port 8080] [--profile-name kubernetes]"
       echo ""
       echo "This script starts temporary Keycloak and Zeebe gateway port-forwards, creates an OIDC"
       echo "client for c8ctl, stores credentials in a Kubernetes secret, registers a c8ctl profile,"

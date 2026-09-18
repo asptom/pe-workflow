@@ -1,3 +1,5 @@
+> **Note:** filesystem paths in this historical plan were updated after the `scripts/` directory restructuring; see [`dir_structure.md`](dir_structure.md).
+
 # Angular SPA + Go BFF Front-end Plan — v4
 
 Status: **implementation plan (replaces v3)** · Applies to Camunda 8.9 (Chart 14.6.1, Zeebe 8.9.12) on the Rancher Desktop k3s cluster in namespace `camunda`.
@@ -21,9 +23,9 @@ Scope: **POC**. An **unauthenticated UI is acceptable**. Everything runs **local
 |---|------|----------|-----------|
 | 1 | Browser auth | **BFF-only client-credentials. No user login.** | The POC accepts an unauthenticated UI. The BFF is the only actor that talks to Zeebe; the browser receives no token, so we drop `AuthService`, `/auth/token`, and `localStorage` entirely. |
 | 2 | Zeebe credential | **Reuse the existing `zeebe-cli` client + `c8ctl-credentials` secret.** Do **not** create a `frontend-client` client or a `keycloak-secret`. | All six worker services already authenticate with `ZEEBE_CLIENT_ID`/`ZEEBE_CLIENT_SECRET` (secret keys `client-id`/`client-secret`) against the `orchestration` audience. No new Keycloak bootstrap, no new secret, no `configure-c8ctl.sh` changes. |
-| 3 | Exposure | **Port-forward over localhost, same-origin.** In-cluster BFF at `http://localhost:8088` via the port-forward; when running the BFF on the host it binds `localhost:8088` for direct browser access. | The cluster is deliberately no-ingress (`deploy/rancher-desktop/helm-values/values-no-domain.yml` sets `global.ingress.enabled: false`). Everything is reached via `camunda-port-forwards.sh`. No `/etc/hosts`, no `*.local`, no TLS, no ingress-controller work. Same-origin serving makes CORS unnecessary. |
+| 3 | Exposure | **Port-forward over localhost, same-origin.** In-cluster BFF at `http://localhost:8088` via the port-forward; when running the BFF on the host it binds `localhost:8088` for direct browser access. | The cluster is deliberately no-ingress (`scripts/deploy/camunda/helm-values/values-no-domain.yml` sets `global.ingress.enabled: false`). Everything is reached via `camunda-port-forwards.sh`. No `/etc/hosts`, no `*.local`, no TLS, no ingress-controller work. Same-origin serving makes CORS unnecessary. |
 | 4 | Dashboard scope | **List running instances + "Start new" (Enrollment_Orchestrator via its `enrollment-start` form).** | Required to make the UI usable from a browser and to make Playwright tests drive through the real UI instead of shelling out to `c8ctl`. |
-| 5 | Static build into image | **Host builds Angular → embedded via `embed.FS`; one shared Dockerfile.** | The shared `deploy/services/Dockerfile` (`ARG SERVICE`) builds all six services. Keeping the SPA build out of the Go image keeps the BFF a drop-in 7th service with zero Dockerfile churn. Because the Dockerfile only runs Go, the Angular static must be built **before** the image build — the Makefile enforces this order (§5.1). |
+| 5 | Static build into image | **Host builds Angular → embedded via `embed.FS`; one shared Dockerfile.** | The shared `scripts/deploy/services/Dockerfile` (`ARG SERVICE`) builds all six services. Keeping the SPA build out of the Go image keeps the BFF a drop-in 7th service with zero Dockerfile churn. Because the Dockerfile only runs Go, the Angular static must be built **before** the image build — the Makefile enforces this order (§5.1). |
 | 6 | Routing strategy | **`PathLocationStrategy` + explicit SPA fallback in the BFF.** | The BFF serves the SPA same-origin; the Go server returns `index.html` for every non-`/api` GET. No hash routing needed. |
 | 7 | Delivery process | **Local-only.** Makefile-driven build/deploy/verify; Playwright runs locally against the local cluster. **No CI/GitHub Actions in this iteration.** | POC constraint. Keeps the plan consistent with the repo's existing local-only tooling (`build-deploy.sh`, `camunda-port-forwards.sh`) and removes v3's premature `.github/workflows/playwright.yml`. |
 
@@ -297,7 +299,7 @@ Add `data-test` attributes on app-owned chrome (required by Playwright, §6.4): 
 
 - `angular.json` → `projects.pe-frontend.architect.build.options.outputPath: "../../services/cmd/webapp/static"` — single source of truth for the embedded build; **remove** any separate dist-copy step.
 - Dev loop (no Docker):
-  1. `deploy/rancher-desktop/scripts/camunda-port-forwards.sh`
+  1. `scripts/deploy/camunda/scripts/camunda-port-forwards.sh`
   2. run the BFF locally: `ZEEBE_REST_ADDRESS=http://localhost:8080 ZEEBE_AUTHORIZATION_SERVER_URL=http://localhost:18080/auth/realms/camunda-platform/protocol/openid-connect/token BFF_ADDR=localhost:8088 go run ./services/cmd/webapp`
   3. `cd web && ng serve --proxy-config proxy.conf.json` where `proxy.conf.json` forwards `/api` → `http://localhost:8088` (the Angular dev server owns the origin, so no CORS).
 - Prod-ish: `make docker-webapp` → serve everything from the in-cluster BFF at `http://localhost:8088`.
@@ -315,10 +317,10 @@ build-web:
 	cd web && npm ci && npm run build
 
 docker-webapp: build-web
-	docker build --build-arg SERVICE=webapp -t pe-workflow/webapp:latest -f deploy/services/Dockerfile .
+	docker build --build-arg SERVICE=webapp -t pe-workflow/webapp:latest -f scripts/deploy/services/Dockerfile .
 
 deploy-webapp: docker-webapp
-	kubectl apply -f deploy/services/manifests.yaml
+	kubectl apply -f scripts/deploy/services/manifests.yaml
 	kubectl rollout restart deployment/pe-webapp -n camunda
 	kubectl rollout status deployment/pe-webapp -n camunda --timeout=180s
 ```
@@ -327,11 +329,11 @@ deploy-webapp: docker-webapp
 
 ### 5.2 Shared Dockerfile — and the clean-checkout caveat
 
-`deploy/services/Dockerfile` (`golang:1.22` build stage → `alpine:3.20`, `COPY services/ .` then `go build ./cmd/${SERVICE}`) is used unchanged. It expects `services/cmd/webapp/static/` to already exist at `COPY` time (the BFF embeds it via `//go:embed static/*`). Because the Dockerfile does not run `npm`, **the shared Dockerfile alone cannot build a working BFF image without prior host asset generation** (`make build-web` / `npm run build`). This is why §10 acceptance criterion 8 is stated via `make docker-webapp`, not `docker build`.
+`scripts/deploy/services/Dockerfile` (`golang:1.22` build stage → `alpine:3.20`, `COPY services/ .` then `go build ./cmd/${SERVICE}`) is used unchanged. It expects `services/cmd/webapp/static/` to already exist at `COPY` time (the BFF embeds it via `//go:embed static/*`). Because the Dockerfile does not run `npm`, **the shared Dockerfile alone cannot build a working BFF image without prior host asset generation** (`make build-web` / `npm run build`). This is why §10 acceptance criterion 8 is stated via `make docker-webapp`, not `docker build`.
 
-**Alternative (self-contained single image, no host `ng` build):** add `deploy/services/Dockerfile.webapp` — 3-stage (`node:20-alpine` builds `web/`, `golang:1.22` builds the BFF, minimal runtime). Keep it opt-in and **do not** restructure the shared `ARG SERVICE` Dockerfile, which the other six services depend on.
+**Alternative (self-contained single image, no host `ng` build):** add `scripts/deploy/services/Dockerfile.webapp` — 3-stage (`node:20-alpine` builds `web/`, `golang:1.22` builds the BFF, minimal runtime). Keep it opt-in and **do not** restructure the shared `ARG SERVICE` Dockerfile, which the other six services depend on.
 
-### 5.3 `deploy/services/manifests.yaml` — add `pe-webapp`
+### 5.3 `scripts/deploy/services/manifests.yaml` — add `pe-webapp`
 
 Append the standard block (namespace `camunda`, mirrors the other services):
 
@@ -382,16 +384,16 @@ spec:
 
 ### 5.4 Service build & deploy sequence
 
-`deploy/services/build-deploy.sh` remains authoritative for the six backend worker services and workflow resources (`--services`, `--resources`). **Do NOT append `webapp` to `build-deploy.sh`'s `SERVICES` list.** The shared script does not perform Node/Angular builds, and mixing the webapp into its loop would create fragile ordering dependencies.
+`scripts/deploy/services/build-deploy.sh` remains authoritative for the six backend worker services and workflow resources (`--services`, `--resources`). **Do NOT append `webapp` to `build-deploy.sh`'s `SERVICES` list.** The shared script does not perform Node/Angular builds, and mixing the webapp into its loop would create fragile ordering dependencies.
 
 The realistic local sequence is:
-1. **Worker services & workflow resources:** run `./deploy/services/build-deploy.sh --services --resources` to build/deploy the six backend worker images and deploy BPMN, DMN, and form definitions via the c8ctl `rancher-desktop` profile.
+1. **Worker services & workflow resources:** run `./scripts/deploy/services/build-deploy.sh --services --resources` to build/deploy the six backend worker images and deploy BPMN, DMN, and form definitions via the c8ctl `kubernetes` profile.
 2. **Webapp frontend & BFF:** run `make deploy-webapp` (which triggers `build-web` → `docker-webapp` → manifest apply and rollout) to build and deploy `pe-webapp`.
-3. **Port-forwards:** run `deploy/rancher-desktop/scripts/camunda-port-forwards.sh` to expose Zeebe, Keycloak, and the webapp (`localhost:8088`).
+3. **Port-forwards:** run `scripts/deploy/camunda/scripts/camunda-port-forwards.sh` to expose Zeebe, Keycloak, and the webapp (`localhost:8088`).
 
 ### 5.5 Port-forward — entry in the `FORWARDS` array (before the `wait`)
 
-Append one entry to the `FORWARDS` array in `deploy/rancher-desktop/scripts/camunda-port-forwards.sh` — **inside the array, not after the script's trailing `wait`**, so the existing launch loop (and the `PIDS` cleanup trap) pick it up:
+Append one entry to the `FORWARDS` array in `scripts/deploy/camunda/scripts/camunda-port-forwards.sh` — **inside the array, not after the script's trailing `wait`**, so the existing launch loop (and the `PIDS` cleanup trap) pick it up:
 
 ```bash
 FORWARDS=(
@@ -401,7 +403,7 @@ FORWARDS=(
 )
 ```
 
-Local port **8088** — it does not collide with any existing forward (18080 Keycloak, 8080 Zeebe REST/Operate, 8083 Optimize, 8070 Web Modeler, 8085 Modeler websockets, 8087 Console, 8086 Connectors). Browser URL: `http://localhost:8088`. Update `deploy/rancher-desktop/README.md` and the root `README.md` microservice port table with `pe-webapp 8088` / container `8080`.
+Local port **8088** — it does not collide with any existing forward (18080 Keycloak, 8080 Zeebe REST/Operate, 8083 Optimize, 8070 Web Modeler, 8085 Modeler websockets, 8087 Console, 8086 Connectors). Browser URL: `http://localhost:8088`. Update `scripts/deploy/camunda/README.md` and the root `README.md` microservice port table with `pe-webapp 8088` / container `8080`.
 
 ### 5.6 `.gitignore` + docs
 
@@ -417,7 +419,7 @@ Only the **855A delegate path** has user tasks: `Delegate_855A.bpmn` → `UserTa
 ### 6.2 Environment assumptions (local-only)
 
 - The Rancher Desktop k3s cluster already exists with Camunda 8.9 + Keycloak. **`c8ctl cluster start` does not exist in this repo** — do not attempt `startCluster()/stopCluster()`.
-- Preconditions, run before the suite: `deploy/rancher-desktop/scripts/camunda-port-forwards.sh`; `./deploy/services/build-deploy.sh --services --resources` (deploys worker services + all BPMN/DMN/forms via the c8ctl `rancher-desktop` profile).
+- Preconditions, run before the suite: `scripts/deploy/camunda/scripts/camunda-port-forwards.sh`; `./scripts/deploy/services/build-deploy.sh --services --resources` (deploys worker services + all BPMN/DMN/forms via the c8ctl `kubernetes` profile).
 - **Two BFF topologies** (pick one per run; do not mix):
   - *In-cluster BFF:* `make deploy-webapp`, then `kubectl port-forward svc/pe-webapp 8088:8080` (either via `camunda-port-forwards.sh` §5.5 or ad hoc). Playwright's `baseURL` is `http://localhost:8088`. No local BFF process, so no localhost bind is needed — the port-forward owns `localhost:8088`.
   - *Local BFF (Playwright `webServer`):* run `go run ./services/cmd/webapp` on the host bound to `:8088` with `webServer.reuseExistingServer: true` — then either this local instance OR an already-port-forwarded in-cluster one can answer on `localhost:8088`:
@@ -429,12 +431,12 @@ Only the **855A delegate path** has user tasks: `Delegate_855A.bpmn` → `UserTa
       env: { ...process.env, ZEEBE_CLIENT_ID: process.env.ZEEBE_CLIENT_ID, ZEEBE_CLIENT_SECRET: process.env.ZEEBE_CLIENT_SECRET },
     },
     ```
-- `.env` (gitignored) exports: `BFF_URL=http://localhost:8088`, `C8CTL_PROFILE=rancher-desktop`, `ZEEBE_CLIENT_ID`, `ZEEBE_CLIENT_SECRET`.
+- `.env` (gitignored) exports: `BFF_URL=http://localhost:8088`, `C8CTL_PROFILE=kubernetes`, `ZEEBE_CLIENT_ID`, `ZEEBE_CLIENT_SECRET`.
 
 ### 6.3 Structure
 
 ```
-playwright-tests/
+web/tests/
 ├─ e2e/
 │  ├─ start-process.spec.ts     # login-free: start 855A from the dashboard, assert on the detail page
 │  ├─ view-diagram.spec.ts      # render bpmn-js, assert a node/label + timeline loads
@@ -547,7 +549,7 @@ Definition of Done for the feature:
 2. BFF skeleton: `internal/auth` (token manager, §3.2), `internal/proxy` (request forwarding + 401 retry), `internal/api` (handlers, error mapping §3.4, SPA fallback §3.5, `embed.FS`), `/healthz`, `/metrics` (§7). Smoke with curl (§9 authorizations check).
 3. Angular SPA in `web/` (§4.1): Dashboard + detail (bpmn-js + timeline) + start-new; TaskList + TaskForm (form-js) with the §4.5 error strategy and §3.6 completion payloads; `data-test` attributes (§6.4).
 4. `services/cmd/webapp/static` build output wiring (§4.6) + root `Makefile` (§5.1); `.gitignore` updates (§5.6).
-5. `pe-webapp` manifest block in `deploy/services/manifests.yaml` (§5.3) + port-forward array entry in `camunda-port-forwards.sh` (§5.5) + README port table. Deploy backend worker services and resources via `build-deploy.sh` and webapp via Makefile (`make deploy-webapp`, §5.4).
+5. `pe-webapp` manifest block in `scripts/deploy/services/manifests.yaml` (§5.3) + port-forward array entry in `camunda-port-forwards.sh` (§5.5) + README port table. Deploy backend worker services and resources via `build-deploy.sh` and webapp via Makefile (`make deploy-webapp`, §5.4).
 6. Playwright suite (§6) run locally.
 7. Acceptance pass against §10.
 
@@ -557,7 +559,7 @@ Definition of Done for the feature:
 - **Local-only operation:** everything runs against the Rancher Desktop k3s cluster on this workstation; **no CI/GitHub workflows** are added.
 - The cluster already exists with Camunda 8.9 + Keycloak; `c8ctl cluster start` is not used anywhere.
 - The `zeebe-cli` OIDC client already exists with the `orchestration` audience, its credentials live in the `c8ctl-credentials` secret in namespace `camunda`, and its Zeebe authorizations cover the REST v2 operations the BFF needs (verify in §9).
-- The workflow artifacts (forms, DMN, BPMN) are deployed via `build-deploy.sh --resources` / c8ctl profile `rancher-desktop` before the Playwright suite runs.
+- The workflow artifacts (forms, DMN, BPMN) are deployed via `build-deploy.sh --resources` / c8ctl profile `kubernetes` before the Playwright suite runs.
 - No ingress/TLS; reachability is exclusively via `camunda-port-forwards.sh` (`localhost:8088` for the BFF).
-- The shared `deploy/services/Dockerfile` stays as-is (no node stage); the Angular static is host-built and embedded — enforced by the new Makefile.
+- The shared `scripts/deploy/services/Dockerfile` stays as-is (no node stage); the Angular static is host-built and embedded — enforced by the new Makefile.
 - Form field names and form IDs match the checked-in files: `enrollment-start`, `review-validation`, `site-visit-report`; `siteVerified`/`siteVisitOutcome` and `force` follow the contracts in §3.6/§6.5.

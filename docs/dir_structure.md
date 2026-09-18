@@ -207,8 +207,8 @@ Pre-existing latent bug (fix opportunistically, note in PR): line ~155 uses
 |----------|--------|
 | comment (line 18) | `rancher-desktop/manifests/` → `camunda/manifests/` (or `scripts/deploy/camunda/manifests/`) |
 | `SCRIPT_DIR`/`RANCHER_DIR`/`MANIFESTS_DIR` (lines 33-35) | relative layout preserved by moving the whole tree; **no path math change required** |
-| variable name `RANCHER_DIR` (optional) | rename to `CAMUNDA_DIR` for clarity (used at lines 34, 35, 39, 40, 42, 266) |
-| `ENV_FILE` lookup (lines 39-43) | **behaviour fix needed**: `$RANCHER_DIR/..` no longer (and never did) reach the repo-root `env_exports.sh`; point at repo root via `$RANCHER_DIR/../../..` if root-level `env_exports.sh` is intended (see §7) |
+| variable name `RANCHER_DIR` | rename to `CAMUNDA_DIR` for clarity (update uses at lines 34, 35, 39, 40, 42, 266) — **confirmed** |
+| `ENV_FILE` lookup (lines 39-43) | **fix (confirmed):** `$CAMUNDA_DIR/../../..` points at the repo root so the root-level `env_exports.sh` named in `.gitignore` is actually sourced |
 | comment (line 82) | `deploy/rancher-desktop/README.md` → `scripts/deploy/camunda/README.md` |
 | echo (lines 336-339) | `--profile=rancher-desktop` → `--profile=kubernetes` |
 
@@ -246,7 +246,7 @@ Pre-existing latent bug (fix opportunistically, note in PR): line ~155 uses
 | `playwright.config.ts` | `webServer.command` (line 30) | `go run ../services/cmd/webapp` → `go run ../../services/cmd/webapp` |
 | `playwright.config.ts` | `testDir: './e2e'` | **unchanged** (internal layout preserved) |
 | `utils/zeebe.ts` | error message (line 26) | `./deploy/deploy.sh --webapp` → `./scripts/deploy.sh --webapp` |
-| `.env.example` | line 5 | `C8CTL_PROFILE=rancher-desktop` → `kubernetes` (note: this variable is not consumed anywhere — §7) |
+| `.env.example` | line 5 | **delete** the `C8CTL_PROFILE=rancher-desktop` line (it is not consumed by any test code — §7) |
 | `package.json` | name/description | optional rename (`pe-workflow-playwright` still accurate); no path changes |
 | `tsconfig.json`, `e2e/*.spec.ts`, `e2e/helpers/instance.ts` | — | no path references found; verify after move |
 
@@ -262,61 +262,73 @@ Pre-existing latent bug (fix opportunistically, note in PR): line ~155 uses
 - `services/**`, `workflows/**` — no references to the moved paths.
 - `docs/api/bff.openapi.yaml` — no references.
 
-### 5.8 Documentation updates (live docs)
+### 5.8 Documentation updates (ALL docs)
 
-All of these must be updated. Run a final
-`grep -rn "deploy/\|rancher-desktop\|playwright-tests"` to catch stragglers.
+> **Policy (confirmed):** every documentation reference to a moved path or the
+> old c8ctl profile name is updated so the repo has zero stale references after
+> the change. This explicitly includes the historical planning docs. In those
+> files only **path and command references** are substituted; the surrounding
+> narrative and any references to tools that no longer exist (e.g. the deleted
+> `Makefile` targets) are preserved, and a short banner is added noting the paths
+> were updated after the reorg.
 
-**`README.md`**
+Substitution rules applied repo-wide:
 
-- Structure list: replace the `deploy/` bullet with `scripts/` (entry points,
-  `scripts/deploy/camunda`, `scripts/deploy/services`) and add `web/tests/`.
-- Quick Start (lines ~22, 25): `./deploy/deploy.sh` → `./scripts/deploy.sh`;
-  `./deploy/rancher-desktop/scripts/camunda-port-forwards.sh` →
-  `./scripts/deploy/camunda/scripts/camunda-port-forwards.sh`.
-- Playwright section (lines ~37-40): `playwright-tests/` → `web/tests/`.
-- Profile references (lines ~50, 52): `--profile=rancher-desktop` → `kubernetes`.
+| Old | New |
+|-----|-----|
+| `deploy/deploy.sh`, `./deploy/deploy.sh` | `scripts/deploy.sh`, `./scripts/deploy.sh` |
+| `deploy/services/` | `scripts/deploy/services/` |
+| `deploy/rancher-desktop/` | `scripts/deploy/camunda/` |
+| `playwright-tests/` | `web/tests/` |
+| `deploy/rancher-desktop/scripts/camunda-uninstall.sh` | `scripts/uninstall.sh` |
+| `--profile=rancher-desktop`, profile `rancher-desktop` | `--profile=kubernetes`, profile `kubernetes` |
+| `Rancher Desktop k3s` (prose, host platform) | **unchanged** — still correct |
 
-**`DEPLOYMENT.md`** (heaviest)
+**Live docs (update paths, commands, and prose):**
 
-- Line 4: "scripts under `deploy/`" → "scripts under `scripts/`".
-- Line 14, 23, 44, 53, 56, 76, 79, 81, 86, 90, 97, 100, 106, 116, 126, 197-205,
-  217-220, 235-237, 247, 294-309, 317-320: update all `./deploy/...`,
-  `deploy/services/...`, `deploy/rancher-desktop/...` paths.
-- Playwright section (lines ~294-309): `playwright-tests/` → `web/tests/`;
-  the `go run ../services/cmd/webapp` note → `../../services/cmd/webapp`.
-- Cleanup section (lines ~317-320): `./deploy/rancher-desktop/scripts/camunda-uninstall.sh`
-  → `./scripts/uninstall.sh` (and `--full`).
-- Every `--profile=rancher-desktop` → `--profile=kubernetes`.
+- **`README.md`** — line 13 (structure bullet: `deploy/` → `scripts/`, add
+  `web/tests/`); 22, 25 (quick-start commands); 39 (`DEPLOYMENT.md#playwright-tests`
+  anchor is unaffected); 50, 52 (profile).
+- **`DEPLOYMENT.md`** — line 4 ("scripts under `deploy/`" → `scripts/`); 14, 20,
+  23, 27, 44, 53, 56, 65, 76, 79, 81, 86, 90, 97, 100, 106, 116, 126, 135, 183,
+  197-205, 217-220, 235-237, 247, 294-309, 317-320. Playwright section (294-309):
+  `playwright-tests/` → `web/tests/` and the `go run ../services/cmd/webapp` note
+  → `../../services/cmd/webapp`. Cleanup (317-320): uninstall → `./scripts/uninstall.sh`.
+- **`docs/Testing_Guide.md`** — lines 28, 29 (port-forward script), 40, 43, 75
+  (`build-deploy.sh`, `manifests.yaml`); profile at 29, 32, 34, 60, 61, 69-72,
+  131, 144, 145, 156, 170, 172, 174, 185, 186, 196, 213, 224, 225, 236, 265,
+  276-292.
+- **`scripts/deploy/camunda/README.md`** (moved) — line 6 and 111
+  (`../../DEPLOYMENT.md` → `../../../DEPLOYMENT.md`); 9, 38 (`rancher-desktop/` →
+  `camunda/`, described as `scripts/deploy/camunda/`); 107-108 (uninstall →
+  repo-root `./scripts/uninstall.sh`).
+- **`docs/services_implementation_plan.md`** — line 13 (port-forward path), 14
+  (profile), 53, 341, 359, 379, 381 (Dockerfile/manifests), 403-429, 436 (profile
+  in every command).
 
-**`docs/Testing_Guide.md`**
+**Historical planning docs (mechanical path/profile substitution + banner):**
 
-- Lines 28, 40, 43, 75: `./deploy/...` → `./scripts/...`; `deploy/services/manifests.yaml`
-  → `scripts/deploy/services/manifests.yaml`.
-- All `--profile=rancher-desktop` occurrences (~30) → `kubernetes`.
-- Lines 79-80, 131, 144-145 and the rest of the command blocks: profile rename.
+- **`docs/deployment_update.md`** — lines 14, 19, 20, 40, 46, 53, 76, 84, 94, 98,
+  104, 106, 108, 110, 115, 116, 122, 137, 150, 155, 170, 173, 191, 201, 213, 214,
+  222, 236, 239-242, 244, 256, 257.
+- **`docs/deployment_update_v2.md`** — lines 17, 18, 20, 22, 23, 34, 40, 41, 42,
+  45, 46, 49, 60, 61, 67, 113, 130, 149, 159, 173, 180, 182, 192, 193, 202, 211,
+  212, 216, 220, 244, 247, 254, 267, 284, 291, 301, 302, 304, 305, 308, 321,
+  338-343, 346, 349.
+- **`docs/frontend-plan.md`** — lines 81, 103, 106.
+- **`docs/frontend-plan-v2.md`** — lines 163, 202.
+- **`docs/frontend-plan-v3.md`** — lines 15, 244, 253, 256, 261, 263, 312, 322,
+  329, 345, 360, 368, 378, 420, 470, 482.
+- **`docs/frontend-plan-v4.md`** — lines 24, 26, 28, 300, 318, 321, 330, 332,
+  334, 385, 388, 390, 394, 404, 420, 437, 550, 560, 562.
 
-**`scripts/deploy/camunda/README.md`** (moved)
+**Intentionally excluded from the sweep:**
 
-- Line 6: `../../DEPLOYMENT.md` → `../../../DEPLOYMENT.md`.
-- Lines 9, 38: `rancher-desktop/` → `camunda/` (and describe it as
-  `scripts/deploy/camunda/`).
-- Lines 107-108: `./scripts/camunda-uninstall.sh` → repo-root `./scripts/uninstall.sh`.
-- Line 111: `../../DEPLOYMENT.md` → `../../../DEPLOYMENT.md`.
-
-**`docs/services_implementation_plan.md`** — decision required (§7). It contains
-live path references (lines 13, 53, 341, 359, 379-381, 403-429, 436) and is the
-target of a Testing_Guide link ("see §9 for the auth setup"). Either update it or
-demote it to historical.
-
-**Historical documents (leave unchanged):**
-
-- `docs/deployment_update.md`, `docs/deployment_update_v2.md`,
-  `docs/frontend-plan.md`, `docs/frontend-plan-v2.md`, `docs/frontend-plan-v3.md`,
-  `docs/frontend-plan-v4.md`.
-
-These record past plans and intentionally reference the old layout. Add a
-one-line note at the top of each only if desired; do not rewrite paths.
+- `docs/dir_structure.md` itself — it necessarily quotes the old paths in its
+  "current structure" and change tables. Do not rewrite its historical sections.
+- `make ...` invocations in the historical frontend-plan docs — they describe a
+  deleted Makefile; rewrite to the new scripts only if you want full command
+  accuracy, otherwise leave and let the banner cover them.
 
 ### 5.9 c8ctl profile rename (`rancher-desktop` → `kubernetes`)
 
@@ -327,6 +339,9 @@ Client-side only; no cluster resources change.
   realm, and all authorizations are unaffected.
 - Existing machines keep a stale `rancher-desktop` profile in the c8ctl config.
   Migration: `c8ctl remove profile rancher-desktop` (or leave it; harmless).
+- **Document this migration** in `scripts/deploy/camunda/README.md` and the
+  `DEPLOYMENT.md` cleanup/configure sections (confirmed decision §7 #5); do not
+  auto-remove the old profile in `configure-c8ctl.sh`.
 - Document the rename in the PR description so anyone with shell history
   updates their `--profile` flag.
 
@@ -335,35 +350,32 @@ Client-side only; no cluster resources change.
 ## 6. Execution order
 
 1. Land the moves from §5.1 (single commit; rename detection keeps diffs small).
-2. Patch scripts ($5.2-$5.5) and run `bash -n` on each.
-3. Patch `web/tests` config and utils ($5.6).
-4. Patch live docs ($5.8).
-5. Update `.gitignore` ($5.5).
+2. Patch scripts (§5.2-§5.5) and run `bash -n` on each.
+3. Patch `web/tests` config and utils (§5.6).
+4. Patch **all** documentation (§5.8): live docs first, then the mechanical
+   path/profile pass over the historical planning docs.
+5. Update `.gitignore` (§5.5).
 6. Run the validation checklist (§8).
-7. `grep -rn "rancher-desktop\|playwright-tests\|deploy/deploy"` and resolve
-   every remaining hit that is not a historical doc or an intentional host-name
-   mention ("Rancher Desktop k3s" in prose is fine).
+7. Final sweep: `rg -n "rancher-desktop|playwright-tests|deploy/"` and confirm
+   every remaining hit is either an intentional host-name mention
+   ("Rancher Desktop k3s" prose) or a quotation inside `docs/dir_structure.md`
+   itself. No live path may remain stale.
 
 ---
 
-## 7. Open items / decisions needed before or during execution
+## 7. Resolved decisions
 
-1. **`env_exports.sh` lookup** — `camunda-deploy-no-domain.sh` tries
-   `$RANCHER_DIR/../env_exports.sh`, which resolves to `deploy/` today and will
-   resolve to `scripts/deploy/` after the move; neither is the repo root that
-   `.gitignore` implies. Fix to the repo root (`$RANCHER_DIR/../../..`), or drop
-   the lookup? **Recommend fixing to repo root.**
-2. **`docs/services_implementation_plan.md`** — update to the new layout or mark
-   as historical? **Recommend marking historical** and pointing the
-   Testing_Guide auth note at `configure-c8ctl.sh` directly.
-3. **`C8CTL_PROFILE` in `web/tests/.env.example`** — defined but unused. Drop it,
-   or wire it up? **Recommend dropping** to avoid implying it does something.
-4. **Rename `RANCHER_DIR` shell variable** to `CAMUNDA_DIR` (cosmetic).
-   Recommend yes.
-5. **Legacy profile cleanup** — should `configure-c8ctl.sh` auto-remove the old
-   `rancher-desktop` profile, or should the README document the manual command?
-   **Recommend documenting** (less magic in the deployment path).
-6. **`deploy.sh` `$CAMUNDA_NAMESPACE` typo** — fix opportunistically.
+All previously-open items are confirmed and are now part of the work above.
+
+| # | Item | Decision |
+|---|------|----------|
+| 1 | `env_exports.sh` lookup in `camunda-deploy-no-domain.sh` | **Fix to repo root** (`$CAMUNDA_DIR/../../..`) so the root-level `env_exports.sh` named in `.gitignore` is actually sourced. |
+| 2 | `docs/services_implementation_plan.md` | **Update** to the new layout (it is a live reference linked from `Testing_Guide.md`, and the goal is zero stale references). |
+| 3 | Unused `C8CTL_PROFILE` in `web/tests/.env.example` | **Delete the line.** |
+| 4 | Rename `RANCHER_DIR` shell variable | **Yes → `CAMUNDA_DIR`** (cosmetic; update all uses: lines 34, 35, 39, 40, 42, 266). |
+| 5 | Legacy `rancher-desktop` profile cleanup | **Document the manual command** (`c8ctl remove profile rancher-desktop`) in `scripts/deploy/camunda/README.md` / `DEPLOYMENT.md`; do not auto-remove in `configure-c8ctl.sh`. |
+| 6 | `deploy.sh` `$CAMUNDA_NAMESPACE` typo at line ~155 | **Fix** to `$NAMESPACE`. |
+| 7 | Historical planning docs | **Update path/profile references too**, so the whole repo is accurate (mechanical substitutions + banner; §5.8). |
 
 ---
 
@@ -397,11 +409,12 @@ End-to-end (cluster running):
 - [ ] `cd web/tests && npm test`
 - [ ] `./scripts/uninstall.sh` then `./scripts/uninstall.sh --full`
 
-Reference sweep:
+Reference sweep (goal: **no stale references anywhere**):
 
-- [ ] `grep -rn "playwright-tests" .` → only historical docs
-- [ ] `grep -rn "deploy/rancher-desktop\|deploy/services\|\./deploy/deploy.sh" .` → only historical docs
-- [ ] `grep -rn "profile=rancher-desktop" .` → only historical docs
+- [ ] `rg -n "playwright-tests" .` → only `docs/dir_structure.md` (plan quotations)
+- [ ] `rg -n "deploy/rancher-desktop|deploy/services|\./deploy/deploy\.sh" .` → only `docs/dir_structure.md`
+- [ ] `rg -n "profile=rancher-desktop|profile \`rancher-desktop\`" .` → only `docs/dir_structure.md`
+- [ ] Re-run the three `rg` commands above and confirm no hits outside the plan doc
 - [ ] `git status` shows renames, not delete+add, for the moved trees
 
 ---
@@ -411,19 +424,25 @@ Reference sweep:
 Files that reference the moved paths/profiles (line numbers are pre-move and
 may shift as edits land):
 
-| File | What it references |
-|------|--------------------|
-| `deploy/deploy.sh` | `rancher-desktop/scripts`, `deploy/services`, its own path |
-| `deploy/services/build-deploy.sh` | `deploy/services/{Dockerfile,manifests.yaml}`, profile |
-| `deploy/rancher-desktop/scripts/camunda-deploy-no-domain.sh` | `rancher-desktop/manifests`, profile in echoes, README path |
-| `deploy/rancher-desktop/scripts/configure-c8ctl.sh` | profile default + usage |
-| `deploy/rancher-desktop/README.md` | `../../DEPLOYMENT.md`, its own tree, uninstall path |
-| `playwright-tests/playwright.config.ts` | `../services/cmd/webapp` |
-| `playwright-tests/utils/zeebe.ts` | `./deploy/deploy.sh` |
-| `playwright-tests/.env.example` | `C8CTL_PROFILE=rancher-desktop` |
-| `.gitignore` | `playwright-tests/node_modules/` |
-| `README.md` | deploy commands, playwright path, profile |
-| `DEPLOYMENT.md` | all of the above |
-| `docs/Testing_Guide.md` | deploy commands, profile |
-| `docs/services_implementation_plan.md` | deploy paths, profile (historicity TBD) |
-| `docs/deployment_update*.md`, `docs/frontend-plan*.md` | historical only — do not edit |
+| File | Lines (pre-move) | What it references |
+|------|------------------|--------------------|
+| `deploy/deploy.sh` | 3, 10, 13-18, 27, 28, 39, 140 | its own path, `rancher-desktop/scripts`, `deploy/services` |
+| `deploy/services/build-deploy.sh` | 14, 26, 54, 117, 120 | profile, `deploy/services/{Dockerfile,manifests.yaml}` |
+| `deploy/rancher-desktop/scripts/camunda-deploy-no-domain.sh` | 18, 82, 336-339 | `rancher-desktop/manifests`, README path, profile echoes |
+| `deploy/rancher-desktop/scripts/configure-c8ctl.sh` | 43, 69 | profile default + usage |
+| `deploy/rancher-desktop/README.md` | 6, 9, 38, 107, 108, 111 | `../../DEPLOYMENT.md`, its own tree, uninstall path |
+| `playwright-tests/playwright.config.ts` | 30 | `../services/cmd/webapp` |
+| `playwright-tests/utils/zeebe.ts` | 26 | `./deploy/deploy.sh` |
+| `playwright-tests/.env.example` | 5 | `C8CTL_PROFILE=rancher-desktop` |
+| `.gitignore` | 37 | `playwright-tests/node_modules/` |
+| `README.md` | 13, 22, 25, 50, 52 | deploy commands, playwright path, profile |
+| `DEPLOYMENT.md` | 4, 14, 20, 23, 27, 44, 53, 56, 65, 76, 79, 81, 86, 90, 97, 100, 106, 116, 126, 135, 183, 197-205, 217-220, 235-237, 247, 294-309, 317-320 | paths, playwright, uninstall, profile |
+| `docs/Testing_Guide.md` | 28, 29, 32, 34, 40, 43, 60-72, 75, 131, 144, 145, 156, 170-174, 185, 186, 196, 213, 224, 225, 236, 265, 276-292 | deploy commands, manifests, profile |
+| `docs/services_implementation_plan.md` | 13, 14, 53, 341, 359, 379, 381, 403-429, 436 | deploy paths, profile |
+| `docs/deployment_update.md` | 14, 19, 20, 40, 46, 53, 76, 84, 94, 98, 104, 106, 108, 110, 115, 116, 122, 137, 150, 155, 170, 173, 191, 201, 213, 214, 222, 236, 239-242, 244, 256, 257 | historical — path/profile substitution |
+| `docs/deployment_update_v2.md` | 17, 18, 20, 22, 23, 34, 40-42, 45, 46, 49, 60, 61, 67, 113, 130, 149, 159, 173, 180, 182, 192, 193, 202, 211, 212, 216, 220, 244, 247, 254, 267, 284, 291, 301, 302, 304, 305, 308, 321, 338-343, 346, 349 | historical — path/profile substitution |
+| `docs/frontend-plan.md` | 81, 103, 106 | historical — path substitution |
+| `docs/frontend-plan-v2.md` | 163, 202 | historical — path substitution |
+| `docs/frontend-plan-v3.md` | 15, 244, 253, 256, 261, 263, 312, 322, 329, 345, 360, 368, 378, 420, 470, 482 | historical — path/profile substitution |
+| `docs/frontend-plan-v4.md` | 24, 26, 28, 300, 318, 321, 330, 332, 334, 385, 388, 390, 394, 404, 420, 437, 550, 560, 562 | historical — path/profile substitution |
+| `docs/dir_structure.md` | (this file) | intentionally quotes old paths; excluded from sweeps |

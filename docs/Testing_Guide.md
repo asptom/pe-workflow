@@ -25,22 +25,22 @@ including the simulated review/decision pauses.
 1. Cluster reachable. Start the port-forwards and confirm the topology:
 
    ```bash
-   ./deploy/rancher-desktop/scripts/camunda-port-forwards.sh
-   c8ctl get topology --profile=rancher-desktop
+   ./scripts/deploy/camunda/scripts/camunda-port-forwards.sh
+   c8ctl get topology --profile=kubernetes
    ```
 
-2. c8ctl profile `rancher-desktop` is configured and authorized (see
+2. c8ctl profile `kubernetes` is configured and authorized (see
    `docs/services_implementation_plan.md` §9 for the auth setup). Always pass
-   `--profile=rancher-desktop`.
+   `--profile=kubernetes`.
 
 3. Services deployed. Build the six images, apply the manifests, wait for rollout,
    and deploy the workflow resources in the verified order:
 
    ```bash
-   ./deploy/services/build-deploy.sh --services --resources
+   ./scripts/deploy/services/build-deploy.sh --services --resources
    ```
 
-   This runs `docker build` per service, `kubectl apply -f deploy/services/manifests.yaml`,
+   This runs `docker build` per service, `kubectl apply -f scripts/deploy/services/manifests.yaml`,
    `kubectl rollout status deployment/pe-<svc> -n camunda --timeout=120s`, then the four
    `c8ctl deploy` resource steps below.
 
@@ -57,8 +57,8 @@ including the simulated review/decision pauses.
 After editing any BPMN/DMN/form, lint the edited diagrams first:
 
 ```bash
-c8ctl bpmn lint workflows/855x-combined/shared/Shared_SA_Referral.bpmn --profile=rancher-desktop
-c8ctl bpmn lint workflows/855x-combined/Enrollment_Orchestrator.bpmn --profile=rancher-desktop
+c8ctl bpmn lint workflows/855x-combined/shared/Shared_SA_Referral.bpmn --profile=kubernetes
+c8ctl bpmn lint workflows/855x-combined/Enrollment_Orchestrator.bpmn --profile=kubernetes
 ```
 
 Both must report **No issues found.** Then deploy in this order (forms + DMN first,
@@ -66,13 +66,13 @@ shared processes before the orchestrator that calls them, delegates next, orches
 last so the top-level process resolves to the newest child versions):
 
 ```bash
-c8ctl deploy workflows/855x-combined/forms/ workflows/855x-combined/decisions/ --profile=rancher-desktop
-c8ctl deploy workflows/855x-combined/shared/ --profile=rancher-desktop
-c8ctl deploy workflows/855x-combined/delegates/ --profile=rancher-desktop
-c8ctl deploy workflows/855x-combined/Enrollment_Orchestrator.bpmn --profile=rancher-desktop
+c8ctl deploy workflows/855x-combined/forms/ workflows/855x-combined/decisions/ --profile=kubernetes
+c8ctl deploy workflows/855x-combined/shared/ --profile=kubernetes
+c8ctl deploy workflows/855x-combined/delegates/ --profile=kubernetes
+c8ctl deploy workflows/855x-combined/Enrollment_Orchestrator.bpmn --profile=kubernetes
 ```
 
-Or just `./deploy/services/build-deploy.sh --resources`.
+Or just `./scripts/deploy/services/build-deploy.sh --resources`.
 
 ## 2. The simulator
 
@@ -128,7 +128,7 @@ Individual practitioner, no human interaction required.
 ```bash
 c8ctl create pi --id Enrollment_Orchestrator \
   --variables '{"provider":{"enrollmentType":"855I","legalName":"Jane Doe MD","npi":"1234567893","tin":"123456789","filingDate":"2026-07-01"},"submissionMethod":"PECOS"}' \
-  --profile=rancher-desktop
+  --profile=kubernetes
 ```
 
 - NPI `1234567893` ends in an odd digit and no `state` is supplied, so the OIG screen
@@ -141,8 +141,8 @@ c8ctl create pi --id Enrollment_Orchestrator \
 - Verification:
 
   ```bash
-  c8ctl list pi --profile=rancher-desktop
-  c8ctl search vars --processInstanceKey=<key> --profile=rancher-desktop --fullValue
+  c8ctl list pi --profile=kubernetes
+  c8ctl search vars --processInstanceKey=<key> --profile=kubernetes --fullValue
   ```
 
 ### Scenario 2 — 855A (two user tasks)
@@ -153,7 +153,7 @@ from the CLI (or Tasklist).
 ```bash
 c8ctl create pi --id Enrollment_Orchestrator \
   --variables '{"provider":{"enrollmentType":"855A","legalName":"Main Street Clinic","npi":"1111111116","tin":"123456789","entityType":"Facility","licenseNumber":"LIC-1001","fireSafetyCertification":"FSC-2026","state":"NY","filingDate":"2026-07-01"},"submissionMethod":"PECOS"}' \
-  --profile=rancher-desktop
+  --profile=kubernetes
 ```
 
 - NPI `1111111116` ends in an even digit and `state` is supplied, so the risk score
@@ -167,11 +167,11 @@ c8ctl create pi --id Enrollment_Orchestrator \
 Complete the two user tasks:
 
 ```bash
-c8ctl list ut --profile=rancher-desktop
+c8ctl list ut --profile=kubernetes
 # 1. Review Facility Application
-c8ctl complete ut <key> --variables '{"approvalDecision":"Approve"}' --profile=rancher-desktop
+c8ctl complete ut <key> --variables '{"approvalDecision":"Approve"}' --profile=kubernetes
 # 2. Complete Site Visit Report
-c8ctl complete ut <key> --variables '{"siteVerified":true,"siteVisitOutcome":"Passed","fireSafetyCompliant":true}' --profile=rancher-desktop
+c8ctl complete ut <key> --variables '{"siteVerified":true,"siteVisitOutcome":"Passed","fireSafetyCompliant":true}' --profile=kubernetes
 ```
 
 - The review form (`review-validation.form`) binds `approvalDecision` (`Approve`/`Deny`).
@@ -182,8 +182,8 @@ c8ctl complete ut <key> --variables '{"siteVerified":true,"siteVisitOutcome":"Pa
 - Verification:
 
   ```bash
-  c8ctl list ut --profile=rancher-desktop   # should be empty once both are done
-  c8ctl search vars --processInstanceKey=<key> --profile=rancher-desktop --fullValue
+  c8ctl list ut --profile=kubernetes   # should be empty once both are done
+  c8ctl search vars --processInstanceKey=<key> --profile=kubernetes --fullValue
   ```
 
 ### Scenario 3 — 855B (no user tasks)
@@ -193,7 +193,7 @@ DMEPOS supplier, no human interaction.
 ```bash
 c8ctl create pi --id Enrollment_Orchestrator \
   --variables '{"provider":{"enrollmentType":"855B","legalName":"Acme DME Supply","npi":"1999999996","tin":"123456789","entityType":"DME Supplier","stateLicenseNumber":"SL-77","suretyBondAmount":100000,"equipmentLicenseNumber":"EQ-01","state":"FL","filingDate":"2026-07-01"},"submissionMethod":"PECOS"}' \
-  --profile=rancher-desktop
+  --profile=kubernetes
 ```
 
 - Even-last-digit NPI + `state` supplied → risk score `30` → **ELIGIBLE**.
@@ -210,7 +210,7 @@ OIG screening fails for any legal name containing `EXCLUDED`.
 ```bash
 c8ctl create pi --id Enrollment_Orchestrator \
   --variables '{"provider":{"enrollmentType":"855I","legalName":"EXCLUDED PROVIDER","npi":"1234567893","tin":"123456789"}}' \
-  --profile=rancher-desktop
+  --profile=kubernetes
 ```
 
 - Expected path: OIG screening returns `oigCleared=false` → eligibility →
@@ -221,8 +221,8 @@ c8ctl create pi --id Enrollment_Orchestrator \
 - Verify the end state:
 
   ```bash
-  c8ctl list pi --id Enrollment_Orchestrator --profile=rancher-desktop
-  c8ctl search vars --processInstanceKey=<key> --profile=rancher-desktop --fullValue
+  c8ctl list pi --id Enrollment_Orchestrator --profile=kubernetes
+  c8ctl search vars --processInstanceKey=<key> --profile=kubernetes --fullValue
   ```
 
 ### Scenario 5 — CONDITIONAL + additional info
@@ -233,7 +233,7 @@ visit flag) exercises the additional-information branch and the 5 s response win
 ```bash
 c8ctl create pi --id Enrollment_Orchestrator \
   --variables '{"provider":{"enrollmentType":"855B","legalName":"Coastal DME Services","npi":"1234567893","tin":"123456789","entityType":"DME Supplier","stateLicenseNumber":"SL-99","suretyBondAmount":100000,"equipmentLicenseNumber":"EQ-02"}}' \
-  --profile=rancher-desktop
+  --profile=kubernetes
 ```
 
 - No `state` and an odd-last-digit NPI → risk score `75` → **CONDITIONAL**,
@@ -262,7 +262,7 @@ Add `force` to the start variables of any scenario payload, e.g.:
 ```bash
 c8ctl create pi --id Enrollment_Orchestrator \
   --variables '{"force":"responded","provider":{"enrollmentType":"855I","legalName":"Jane Doe MD","npi":"1234567893","tin":"123456789","filingDate":"2026-07-01"},"submissionMethod":"PECOS"}' \
-  --profile=rancher-desktop
+  --profile=kubernetes
 ```
 
 The outcome is now deterministic. Omit `force` from the variables to go back to random.
@@ -273,23 +273,23 @@ started with.
 
 | Purpose | Command |
 |---|---|
-| Live tail of process activity | `c8ctl watch --profile=rancher-desktop` |
-| Find the instance key | `c8ctl list pi --id Enrollment_Orchestrator --profile=rancher-desktop` |
-| Jobs activated / pending workers | `c8ctl list jobs --processInstanceKey=<key> --profile=rancher-desktop` |
-| Full variable dump | `c8ctl search vars --processInstanceKey=<key> --profile=rancher-desktop --fullValue` |
-| Open user tasks | `c8ctl list ut --profile=rancher-desktop` |
-| Complete a user task | `c8ctl complete ut <key> --variables '<json>' --profile=rancher-desktop` |
-| Active incidents (expect none) | `c8ctl search inc --profile=rancher-desktop` |
+| Live tail of process activity | `c8ctl watch --profile=kubernetes` |
+| Find the instance key | `c8ctl list pi --id Enrollment_Orchestrator --profile=kubernetes` |
+| Jobs activated / pending workers | `c8ctl list jobs --processInstanceKey=<key> --profile=kubernetes` |
+| Full variable dump | `c8ctl search vars --processInstanceKey=<key> --profile=kubernetes --fullValue` |
+| Open user tasks | `c8ctl list ut --profile=kubernetes` |
+| Complete a user task | `c8ctl complete ut <key> --variables '<json>' --profile=kubernetes` |
+| Active incidents (expect none) | `c8ctl search inc --profile=kubernetes` |
 | Simulator decisions in the logs | `kubectl logs -n camunda deployment/pe-simulator` |
 | Notification sends in the logs | `kubectl logs -n camunda deployment/pe-notifications` |
-| Cancel a stuck instance | `c8ctl cancel pi <key> --profile=rancher-desktop` |
+| Cancel a stuck instance | `c8ctl cancel pi <key> --profile=kubernetes` |
 
 End-of-run checks:
 
 ```bash
-c8ctl search inc --profile=rancher-desktop          # expect: no active incidents
-c8ctl list pi --state COMPLETED --profile=rancher-desktop
-c8ctl search vars --processInstanceKey=<key> --profile=rancher-desktop --fullValue
+c8ctl search inc --profile=kubernetes          # expect: no active incidents
+c8ctl list pi --state COMPLETED --profile=kubernetes
+c8ctl search vars --processInstanceKey=<key> --profile=kubernetes --fullValue
 ```
 
 ## 5. Eligibility and timeline branching rules

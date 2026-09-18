@@ -3,10 +3,10 @@
 Self-contained reference for deploying Camunda 8 Self-Managed to Rancher Desktop's local
 k3s cluster using port-forwarding (no ingress, no domain).
 
-> **Deployment instructions live in the root [`DEPLOYMENT.md`](../../DEPLOYMENT.md).**
+> **Deployment instructions live in the root [`DEPLOYMENT.md`](../../../DEPLOYMENT.md).**
 > This directory is also a reusable template: all manifests and Helm values needed for the
 > deployment are included under `manifests/` and `helm-values/`, so you can copy the whole
-> `rancher-desktop/` directory to another project and run the scripts standalone.
+> `scripts/deploy/camunda/` directory to another project and run the scripts standalone.
 
 ## Scripts
 
@@ -15,10 +15,14 @@ k3s cluster using port-forwarding (no ingress, no domain).
 | `scripts/camunda-deploy-no-domain.sh` | Full platform deployment (Steps 1–7) |
 | `scripts/configure-c8ctl.sh` | c8ctl profile + Zeebe authorizations (Step 7) |
 | `scripts/camunda-port-forwards.sh` | Starts all long-lived port-forwards |
-| `scripts/camunda-uninstall.sh` | Tear down (`--full` also removes operator CRDs) |
+| `./scripts/uninstall.sh` (repo root) | Tear down (`--full` also removes operator CRDs) |
 
 Run the platform script with `--check-versions` to print pinned component versions, or
 `--skip-c8ctl-config` to defer c8ctl configuration.
+
+> **c8ctl profile renamed.** `configure-c8ctl.sh` now creates the `kubernetes` profile
+> (previously `rancher-desktop`). An old `rancher-desktop` profile may still be cached
+> locally; remove it with `c8ctl remove profile rancher-desktop`.
 
 ## What Gets Deployed
 
@@ -35,7 +39,7 @@ Run the platform script with `--check-versions` to print pinned component versio
 ## Directory Structure
 
 ```
-rancher-desktop/
+scripts/deploy/camunda/
 ├── README.md                          # This file
 ├── helm-values/
 │   └── values-no-domain.yml           # Camunda Helm values (no-domain/port-forward mode)
@@ -54,9 +58,10 @@ rancher-desktop/
 └── scripts/
     ├── camunda-deploy-no-domain.sh   # Main deployment script (Steps 1-7)
     ├── configure-c8ctl.sh            # c8ctl profile + Zeebe authorizations (Step 7)
-    ├── camunda-port-forwards.sh      # Port-forwarding helper
-    └── camunda-uninstall.sh          # Cleanup script
+    └── camunda-port-forwards.sh      # Port-forwarding helper
 ```
+
+The teardown script lives at the repo root as `./scripts/uninstall.sh`.
 
 ## Environment Variables
 
@@ -104,8 +109,8 @@ kubectl get secret keycloak-initial-admin -n camunda \
 ## Cleanup
 
 ```bash
-./scripts/camunda-uninstall.sh          # uninstall Helm release + delete namespaces
-./scripts/camunda-uninstall.sh --full   # also delete operator CRDs
+./scripts/uninstall.sh          # uninstall Helm release + delete namespaces
+./scripts/uninstall.sh --full   # also delete operator CRDs
 ```
 
-See the root [`DEPLOYMENT.md`](../../DEPLOYMENT.md) for full details.
+See the root [`DEPLOYMENT.md`](../../../DEPLOYMENT.md) for full details.

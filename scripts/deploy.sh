@@ -1,21 +1,21 @@
 #!/usr/bin/env bash
 # ============================================================
-# deploy/deploy.sh — single entry point for deploying the full pe-workflow
+# scripts/deploy.sh — single entry point for deploying the full pe-workflow
 # stack onto a local Rancher Desktop k3s cluster.
 #
 # Long-lived port-forwards are NOT managed here. Steps that need a forward
 # during deployment (c8ctl configuration, resource deployment) obtain a
 # temporary one themselves and tear it down on exit. Start long-lived
 # forwards separately with:
-#   ./deploy/rancher-desktop/scripts/camunda-port-forwards.sh
+#   ./scripts/deploy/camunda/scripts/camunda-port-forwards.sh
 #
 # Usage:
-#   ./deploy/deploy.sh --all          # everything (default)
-#   ./deploy/deploy.sh --platform     # Camunda platform only
-#   ./deploy/deploy.sh --configure    # c8ctl profile/authorizations only
-#   ./deploy/deploy.sh --services     # build + deploy Go workers only
-#   ./deploy/deploy.sh --resources    # deploy workflow artifacts only
-#   ./deploy/deploy.sh --webapp       # build + deploy Angular SPA/BFF only
+#   ./scripts/deploy.sh --all          # everything (default)
+#   ./scripts/deploy.sh --platform     # Camunda platform only
+#   ./scripts/deploy.sh --configure    # c8ctl profile/authorizations only
+#   ./scripts/deploy.sh --services     # build + deploy Go workers only
+#   ./scripts/deploy.sh --resources    # deploy workflow artifacts only
+#   ./scripts/deploy.sh --webapp       # build + deploy Angular SPA/BFF only
 #
 # Flags may be combined, e.g. --platform --services.
 # ============================================================
@@ -24,8 +24,8 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 NAMESPACE="${NAMESPACE:-camunda}"
 RELEASE_NAME="${RELEASE_NAME:-camunda}"
-SCRIPTS_DIR="$ROOT/deploy/rancher-desktop/scripts"
-SERVICES_DIR="$ROOT/deploy/services"
+SCRIPTS_DIR="$ROOT/scripts/deploy/camunda/scripts"
+SERVICES_DIR="$ROOT/scripts/deploy/services"
 
 DO_PLATFORM=false
 DO_CONFIGURE=false
@@ -36,7 +36,7 @@ HAS_FLAG=false
 
 usage() {
   cat <<'EOF'
-Usage: ./deploy/deploy.sh [--all] [--platform] [--configure] [--services] [--resources] [--webapp]
+Usage: ./scripts/deploy.sh [--all] [--platform] [--configure] [--services] [--resources] [--webapp]
 
   --all          Deploy everything (default when no flags are given)
   --platform     Deploy the Camunda platform
@@ -137,7 +137,7 @@ if $DO_WEBAPP; then step_webapp; fi
 
 banner "Deployment complete"
 echo "Start long-lived port-forwards for interactive use:"
-echo "  ./deploy/rancher-desktop/scripts/camunda-port-forwards.sh"
+echo "  ./scripts/deploy/camunda/scripts/camunda-port-forwards.sh"
 
 banner "Access URLs"
 echo "  Identity:   http://localhost:8080/identity"
@@ -152,6 +152,6 @@ echo "  Zeebe gRPC: localhost:26500"
 echo "  PE WebApp: localhost:8088"
 echo ""
 echo "To get credentials for admin, run: "
-echo "  kubectl get secret camunda-credentials -n $CAMUNDA_NAMESPACE \\"
+echo "  kubectl get secret camunda-credentials -n $NAMESPACE \\"
 echo "    -o jsonpath='{.data.identity-first-user-password}' | base64 -d"
 echo ""

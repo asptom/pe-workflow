@@ -10,8 +10,8 @@ Implement **5 Go microservices**, each exposing an HTTP API (business logic) **a
 
 ## 2. Verified environment & constraints
 
-- **Cluster:** Camunda Platform helm chart `14.6.1`, release `camunda`, namespace `camunda`, Rancher Desktop k3s. **No ingress** — local access only via `deploy/rancher-desktop/scripts/camunda-port-forwards.sh`.
-- **c8ctl profile:** `rancher-desktop`; always pass `--profile=rancher-desktop`. Auth OIDC client `zeebe-cli`, realm `camunda-platform`, audience `orchestration`.
+- **Cluster:** Camunda Platform helm chart `14.6.1`, release `camunda`, namespace `camunda`, Rancher Desktop k3s. **No ingress** — local access only via `scripts/deploy/camunda/scripts/camunda-port-forwards.sh`.
+- **c8ctl profile:** `kubernetes`; always pass `--profile=kubernetes`. Auth OIDC client `zeebe-cli`, realm `camunda-platform`, audience `orchestration`.
 - **Zeebe gateway:** service `camunda-zeebe-gateway` in namespace `camunda`. gRPC `26500` (in-cluster: `camunda-zeebe-gateway:26500`; local: `kubectl port-forward svc/camunda-zeebe-gateway -n camunda 26500:26500`). REST `8080` (local port-forward).
 - **Worker auth:** reuse the existing `zeebe-cli` credentials (already in secret `c8ctl-credentials`). `configure-c8ctl.sh` grants `zeebe-cli` `UPDATE_PROCESS_INSTANCE` on `PROCESS_DEFINITION` plus full user-task perms — exactly what job workers need. **No new client or authorizations required.**
 - **Go client:** the official `github.com/camunda/zeebe/clients/go/v8` was **deprecated at Camunda 8.6**. Use **`github.com/camunda-community-hub/zeebe-client-go/v8@v8.6.0`** (verified on pkg.go.dev).
@@ -50,7 +50,7 @@ services/
   cmd/scheduling/main.go
   cmd/documents/main.go
   cmd/notifications/main.go
-deploy/services/
+scripts/deploy/services/
   Dockerfile                   multi-stage, --build-arg SERVICE=<name>
   manifests.yaml               Deployments + optional Services (namespace camunda)
 ```
@@ -338,7 +338,7 @@ Without §6.4 + §6.1 flattening + §6.2c, `Eligibility_Rules` evaluated `ELIGIB
 
 ## 7. Container images & Kubernetes deployment
 
-`deploy/services/Dockerfile` (multi-stage):
+`scripts/deploy/services/Dockerfile` (multi-stage):
 
 ```dockerfile
 FROM golang:1.22 AS build
@@ -356,7 +356,7 @@ EXPOSE 8080
 ENTRYPOINT ["/app"]
 ```
 
-`deploy/services/manifests.yaml` — per service: a `Deployment` in namespace `camunda` (image `pe-workflow/<service>:latest`, 1 replica, liveness/readiness probe on the HTTP port) and an optional `Service` for manual curl. Env (identical for all five, values from the existing `c8ctl-credentials` secret):
+`scripts/deploy/services/manifests.yaml` — per service: a `Deployment` in namespace `camunda` (image `pe-workflow/<service>:latest`, 1 replica, liveness/readiness probe on the HTTP port) and an optional `Service` for manual curl. Env (identical for all five, values from the existing `c8ctl-credentials` secret):
 
 ```yaml
 env:
@@ -376,9 +376,9 @@ Build & install:
 
 ```bash
 for svc in eligibility verification scheduling documents notifications; do
-  docker build --build-arg SERVICE=$svc -t pe-workflow/$svc:latest deploy/services
+  docker build --build-arg SERVICE=$svc -t pe-workflow/$svc:latest scripts/deploy/services
 done
-kubectl apply -f deploy/services/manifests.yaml
+kubectl apply -f scripts/deploy/services/manifests.yaml
 kubectl rollout status deployment -n camunda eligibility verification scheduling documents notifications
 kubectl logs -n camunda deployment/eligibility    # expect: worker open + "connected"
 ```
@@ -400,40 +400,40 @@ go run ./cmd/verification
 
 ```bash
 # 1. Cluster reachable
-./deploy/rancher-desktop/scripts/camunda-port-forwards.sh
-c8ctl get topology --profile=rancher-desktop
+./scripts/deploy/camunda/scripts/camunda-port-forwards.sh
+c8ctl get topology --profile=kubernetes
 
 # 2. Lint the edited BPMN
 for f in workflows/855x-combined/Enrollment_Orchestrator.bpmn \
          workflows/855x-combined/delegates/*.bpmn \
          workflows/855x-combined/shared/Shared_OIG_Screening.bpmn; do
-  c8ctl bpmn lint "$f" --profile=rancher-desktop
+  c8ctl bpmn lint "$f" --profile=kubernetes
 done
 
 # 3. Redeploy resources (forms → DMN → shared → delegates → orchestrator)
-c8ctl deploy workflows/855x-combined/forms/ workflows/855x-combined/decisions/ --profile=rancher-desktop
-c8ctl deploy workflows/855x-combined/shared/ --profile=rancher-desktop
-c8ctl deploy workflows/855x-combined/delegates/ --profile=rancher-desktop
-c8ctl deploy workflows/855x-combined/Enrollment_Orchestrator.bpmn --profile=rancher-desktop
+c8ctl deploy workflows/855x-combined/forms/ workflows/855x-combined/decisions/ --profile=kubernetes
+c8ctl deploy workflows/855x-combined/shared/ --profile=kubernetes
+c8ctl deploy workflows/855x-combined/delegates/ --profile=kubernetes
+c8ctl deploy workflows/855x-combined/Enrollment_Orchestrator.bpmn --profile=kubernetes
 
 # 4. Run an 855I instance (no user tasks, completes end-to-end)
 c8ctl run Enrollment_Orchestrator.bpmn \
   --variables='{"provider":{"enrollmentType":"855I","legalName":"Jane Doe MD","npi":"1234567893","tin":"123456789","filingDate":"2026-07-01"},"submissionMethod":"PECOS"}' \
-  --profile=rancher-desktop
-c8ctl watch --profile=rancher-desktop
+  --profile=kubernetes
+c8ctl watch --profile=kubernetes
 
 # 5. Run an 855A instance and complete the user tasks in Tasklist
 c8ctl run Enrollment_Orchestrator.bpmn \
   --variables='{"provider":{"enrollmentType":"855A","legalName":"Main Street Clinic","npi":"1234567893","tin":"123456789","filingDate":"2026-07-01"},"submissionMethod":"PECOS"}' \
-  --profile=rancher-desktop
-c8ctl open tasklist --profile=rancher-desktop   # Review Facility Application, Complete Site Visit Report
+  --profile=kubernetes
+c8ctl open tasklist --profile=kubernetes   # Review Facility Application, Complete Site Visit Report
 
 # 6. Exercise the eligibility branches
-c8ctl run Enrollment_Orchestrator.bpmn --variables='{"provider":{"enrollmentType":"855I","legalName":"EXCLUDED PROVIDER","npi":"1234567893","tin":"123456789"}}' --profile=rancher-desktop  # → INELIGIBLE
+c8ctl run Enrollment_Orchestrator.bpmn --variables='{"provider":{"enrollmentType":"855I","legalName":"EXCLUDED PROVIDER","npi":"1234567893","tin":"123456789"}}' --profile=kubernetes  # → INELIGIBLE
 # riskScore ≥ 50 (NPI ends in odd digit + empty state) → CONDITIONAL path
 ```
 
-Check Operate for completed `approvalLetterStatus`/`denialLetterStatus`/`cmsForwardStatus` and `documentation.documentId`; `c8ctl search inc --profile=rancher-desktop` should be empty.
+Check Operate for completed `approvalLetterStatus`/`denialLetterStatus`/`cmsForwardStatus` and `documentation.documentId`; `c8ctl search inc --profile=kubernetes` should be empty.
 
 ## 10. Troubleshooting
 

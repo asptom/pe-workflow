@@ -23,7 +23,7 @@ export async function checkBffHealth(baseURL: string = bffUrl()): Promise<void> 
     if (response.status() !== 200 || body.status !== 'ok') {
       throw new Error(
         `BFF readiness check failed at ${baseURL}/healthz (HTTP ${response.status()}, body ${JSON.stringify(body)}). ` +
-          'Start the BFF (./deploy/deploy.sh --webapp or the local `go run` webServer) and make sure the Camunda port-forwards are up.',
+          'Start the BFF (./scripts/deploy.sh --webapp or the local `go run` webServer) and make sure the Camunda port-forwards are up.',
       );
     }
   } finally {

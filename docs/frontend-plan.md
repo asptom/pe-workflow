@@ -1,3 +1,5 @@
+> **Note:** filesystem paths in this historical plan were updated after the `scripts/` directory restructuring; see [`dir_structure.md`](dir_structure.md).
+
 # Front‑end & BFF Implementation Plan
 
 ## Overview
@@ -78,7 +80,7 @@ After `ng build --prod`, the static files will land in `../services/cmd/webapp/s
 
 ## 3. Deployment
 ### 3.1 Dockerfile for BFF
-In `deploy/services/Dockerfile`, add a multi‑stage build:
+In `scripts/deploy/services/Dockerfile`, add a multi‑stage build:
 1. **Builder** – build the Go binary.
 2. **Static** – copy Angular `dist` folder.
 3. **Runtime** – copy binary and static files into a small `distroless` or `alpine` image.
@@ -100,10 +102,10 @@ COPY --from=builder /app/webapp /app
 COPY --from=builder /usr/share/webapp/static /usr/share/webapp/static
 CMD ["./webapp"]
 ```
-Add the image to `deploy/services/manifests.yaml` so it deploys alongside the Zeebe gateway.
+Add the image to `scripts/deploy/services/manifests.yaml` so it deploys alongside the Zeebe gateway.
 
 ### 3.2 Helm values
-Add a new section in `deploy/rancher-desktop/helm-values/values-no-domain.yml` to expose a service on port `80` (or `8081` if conflict) and a matching Ingress.
+Add a new section in `scripts/deploy/camunda/helm-values/values-no-domain.yml` to expose a service on port `80` (or `8081` if conflict) and a matching Ingress.
 
 ## 4. Testing & QA
 | Type | Tool | Target |

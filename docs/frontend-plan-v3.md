@@ -1,3 +1,5 @@
+> **Note:** filesystem paths in this historical plan were updated after the `scripts/` directory restructuring; see [`dir_structure.md`](dir_structure.md).
+
 # Angular SPA + Go BFF Front-end Architecture — v3
 
 Status: **implementation plan (replace v2)** · Applies to Camunda 8.9 (Chart 14.6.1, Zeebe 8.9.12) on the Rancher Desktop k3s cluster in namespace `camunda`.
@@ -12,7 +14,7 @@ Status: **implementation plan (replace v2)** · Applies to Camunda 8.9 (Chart 14
 | 2 | Zeebe credential | **Reuse existing `zeebe-cli` client + `c8ctl-credentials` secret.** Do **not** create a `frontend-client` client or `keycloak-secret`. | All six worker services already authenticate with `ZEEBE_CLIENT_ID`/`ZEEBE_CLIENT_SECRET` (secret keys `client-id`/`client-secret`) and audience `orchestration`. No new Keycloak bootstrap, no new secret, no `configure-c8ctl.sh` changes. |
 | 3 | Exposure | **Port-forward over localhost, same-origin.** BFF on `localhost:8088`. | The cluster is deliberately no-ingress (see `values-no-domain.yml` line 22: `global.ingress.enabled: false`). Everything is reached via `camunda-port-forwards.sh`. No `/etc/hosts`, no `*.local`, no TLS, no ingress controller work. Same-origin serving makes CORS unnecessary. |
 | 4 | Dashboard scope | **List running instances + "Start new" (Enrollment_Orchestrator via its start form).** | Required to make the UI usable from a browser and to make Playwright tests drive through the real UI instead of shelling out to `c8ctl`. Adds the two endpoints v2 was missing. |
-| 5 | Static build into image | **Host builds Angular → embedded via `embed.FS` (v1-style); one shared Dockerfile.** | The shared `deploy/services/Dockerfile` (`ARG SERVICE`) builds all six services. Keeping the SPA build out of the Go image means the BFF is a drop-in 7th service with zero Dockerfile churn. A self-contained 3-stage alt is documented (§6.1b). |
+| 5 | Static build into image | **Host builds Angular → embedded via `embed.FS` (v1-style); one shared Dockerfile.** | The shared `scripts/deploy/services/Dockerfile` (`ARG SERVICE`) builds all six services. Keeping the SPA build out of the Go image means the BFF is a drop-in 7th service with zero Dockerfile churn. A self-contained 3-stage alt is documented (§6.1b). |
 | 6 | Routing strategy | **`PathLocationStrategy` + explicit SPA fallback in the BFF.** | BFF serves the SPA same-origin; the Go server returns `index.html` for every non-`/api` GET. No hash routing needed. |
 
 Non-goals for this iteration: per-user identity/OIDC, multi-tenancy, ingress/TLS, user task assignment UX.
@@ -241,7 +243,7 @@ Add `data-test` attributes on: instance key links (`data-test=process-id`), star
 
 - `angular.json` → `projects.pe-frontend.architect.build.options.outputPath: "../../services/cmd/webapp/static"` (single source of truth for the embedded build; **remove** any separate dist-copy step — fixes the v2 §4.6-vs-§5.1 contradiction).
 - Dev loop (no Docker):
-  1. `deploy/rancher-desktop/scripts/camunda-port-forwards.sh`
+  1. `scripts/deploy/camunda/scripts/camunda-port-forwards.sh`
   2. run BFF locally: `ZEEBE_REST_ADDRESS=localhost:8080 ... go run ./services/cmd/webapp` on `:8088`
   3. `cd web && ng serve --proxy-config proxy.conf.json` where `proxy.conf.json` forwards `/api` → `http://localhost:8088` (Angular dev server owns the origin, so no CORS)
 - Prod-ish: `ng build` → `docker build --build-arg SERVICE=webapp` (§6.1a) → serve everything from the BFF at `localhost:8088`.
@@ -250,17 +252,17 @@ Add `data-test` attributes on: instance key links (`data-test=process-id`), star
 
 ### 5.1 Docker image — one shared Dockerfile (primary)
 
-The existing `deploy/services/Dockerfile` (`ARG SERVICE`) is used unchanged:
+The existing `scripts/deploy/services/Dockerfile` (`ARG SERVICE`) is used unchanged:
 
 1. Host: `cd web && npm ci && npm run build` → emits `services/cmd/webapp/static` (gitignored).
-2. `docker build --build-arg SERVICE=webapp -t pe-workflow/webapp:latest -f deploy/services/Dockerfile .`
+2. `docker build --build-arg SERVICE=webapp -t pe-workflow/webapp:latest -f scripts/deploy/services/Dockerfile .`
 3. `COPY services/ .` already includes `static/`; `//go:embed static/*` bundles it at compile time.
 
 Rename the generic multi-arg file note: this exact command is what §6.3's build loop runs. Add a root `Makefile` (repo currently has none) with `make build-web`, `make docker-webapp`, `make deploy-webapp` so the node→go→docker ordering cannot be forgotten.
 
-**5.1b Alternative (self-contained single image, no host ng build):** add `deploy/services/Dockerfile.webapp` (3-stage: `node:20-alpine` builds `web/`, `golang:1.22` builds the BFF, distroless/alpine runtime). Keep it as an opt-in `.webapp` Dockerfile and **do not** restructure the shared `ARG SERVICE` Dockerfile, which the other six services depend on.
+**5.1b Alternative (self-contained single image, no host ng build):** add `scripts/deploy/services/Dockerfile.webapp` (3-stage: `node:20-alpine` builds `web/`, `golang:1.22` builds the BFF, distroless/alpine runtime). Keep it as an opt-in `.webapp` Dockerfile and **do not** restructure the shared `ARG SERVICE` Dockerfile, which the other six services depend on.
 
-### 5.2 `deploy/services/manifests.yaml` — add `pe-webapp`
+### 5.2 `scripts/deploy/services/manifests.yaml` — add `pe-webapp`
 
 Append the standard block (namespace `camunda`, mirrors the other services):
 
@@ -309,7 +311,7 @@ spec:
   ports: [{ port: 8080, targetPort: 8080 }]
 ```
 
-### 5.3 `deploy/services/build-deploy.sh`
+### 5.3 `scripts/deploy/services/build-deploy.sh`
 
 Append `webapp` to `SERVICES="eligibility verification scheduling documents notifications simulator"` (line 12). The existing build/rollout loop then handles it with no other changes:
 
@@ -319,14 +321,14 @@ Append `webapp` to `SERVICES="eligibility verification scheduling documents noti
 
 ### 5.4 Port-forward (browser reachability)
 
-Append to `deploy/rancher-desktop/scripts/camunda-port-forwards.sh`:
+Append to `scripts/deploy/camunda/scripts/camunda-port-forwards.sh`:
 
 ```bash
 # BFF / frontend (pe-webapp)
 kubectl -n camunda port-forward svc/pe-webapp 8088:8080 &
 ```
 
-Local port **8088** (8080 is already the Zeebe REST forward). Update the `deploy/rancher-desktop/README.md` and root `README.md` "microservice ports" table with `pe-webapp 8088` / container `8080`.
+Local port **8088** (8080 is already the Zeebe REST forward). Update the `scripts/deploy/camunda/README.md` and root `README.md` "microservice ports" table with `pe-webapp 8088` / container `8080`.
 
 ### 5.5 `.gitignore` + docs
 
@@ -342,7 +344,7 @@ Only the **855A delegate path** has user tasks (`Delegate_855A` → `UserTask_85
 ### 6.2 Environment assumptions (fixed vs v2)
 
 - The Rancher Desktop k3s cluster already exists with Camunda 8.9 + Keycloak. **`c8ctl cluster start` does not exist in this repo** — do not attempt `startCluster()/stopCluster()`.
-- Preconditions, run before the suite: `camunda-port-forwards.sh`; `./deploy/services/build-deploy.sh --services --resources` (deploys worker services + all BPMN/DMN/forms via c8ctl profile `rancher-desktop`).
+- Preconditions, run before the suite: `camunda-port-forwards.sh`; `./scripts/deploy/services/build-deploy.sh --services --resources` (deploys worker services + all BPMN/DMN/forms via c8ctl profile `kubernetes`).
 - The BFF runs either locally (`go run`, see §4.6) or as the in-cluster `pe-webapp` behind the port-forward. Playwright's `webServer` starts the BFF locally with `reuseExistingServer: true`:
   ```js
   webServer: {
@@ -352,12 +354,12 @@ Only the **855A delegate path** has user tasks (`Delegate_855A` → `UserTask_85
     env: { ...process.env, ZEEBE_CLIENT_ID, ZEEBE_CLIENT_SECRET /* from .env */ },
   }
   ```
-- `.env` (gitignored) exports: `BFF_URL=http://localhost:8088`, `C8CTL_PROFILE=rancher-desktop`, `ZEEBE_CLIENT_ID`, `ZEEBE_CLIENT_SECRET`.
+- `.env` (gitignored) exports: `BFF_URL=http://localhost:8088`, `C8CTL_PROFILE=kubernetes`, `ZEEBE_CLIENT_ID`, `ZEEBE_CLIENT_SECRET`.
 
 ### 6.3 Structure
 
 ```
-playwright-tests/
+web/tests/
 ├─ e2e/
 │  ├─ start-process.spec.ts     # login-free: start 855A from dashboard, assert on detail page
 │  ├─ view-diagram.spec.ts      # render bpmn-js, assert a node/label + timeline loads

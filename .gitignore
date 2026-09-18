@@ -34,7 +34,7 @@ web/node_modules/
 services/cmd/webapp/static/*
 
 # Playwright test suite
-playwright-tests/node_modules/
+web/tests/node_modules/
 .env
 playwright-report/
 test-results/
