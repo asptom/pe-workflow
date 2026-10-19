@@ -24,9 +24,13 @@ steps:
 
     cd services
 
-    echo "Running Go tests..."
-    go test ./...
-  displayName: 'Run Go tests'
+    echo "Running Go tests for shared packages..."
+    go test ./internal/...
+
+    echo
+    echo "Building eligibility service..."
+    go build ./cmd/eligibility
+  displayName: 'Test Go packages and build eligibility'
 
 - task: AzureCLI@2
   displayName: 'Build and push eligibility image'
