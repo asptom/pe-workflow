@@ -7,11 +7,29 @@ pool:
 variables:
   azureServiceConnection: pe-workflow-azure
   resourceGroup: GWS-Engineering_and_Innovation-Sandbox
+  acrName: acrpeworkflowd211
+  acrLoginServer: acrpeworkflowd211.azurecr.io
+  testService: eligibility
+
 steps:
 - checkout: self
 
+- task: GoTool@0
+  displayName: 'Install Go 1.22'
+  inputs:
+    version: '1.22.0'
+
+- script: |
+    set -euo pipefail
+
+    cd services
+
+    echo "Running Go tests..."
+    go test ./...
+  displayName: 'Run Go tests'
+
 - task: AzureCLI@2
-  displayName: 'Validate Azure service connection'
+  displayName: 'Build and push eligibility image'
   inputs:
     azureSubscription: $(azureServiceConnection)
     scriptType: bash
@@ -19,26 +37,42 @@ steps:
     inlineScript: |
       set -euo pipefail
 
-      echo "Azure authentication succeeded"
-      echo
-
-      echo "Active subscription:"
+      echo "Azure identity:"
       az account show \
-        --query "{name:name,id:id,tenantId:tenantId}" \
+        --query "{subscription:name,tenantId:tenantId}" \
         -o table
 
       echo
-      echo "Validating access to resource group: $(resourceGroup)"
-
-      az group show \
-        --name "$(resourceGroup)" \
-        --query "{name:name,location:location,id:id}" \
-        -o table
+      echo "Authenticating Docker to ACR..."
+      az acr login \
+        --name "$(acrName)"
 
       echo
-      echo "Container registries in the resource group:"
+      echo "Building $(testService)..."
 
-      az acr list \
-        --resource-group "$(resourceGroup)" \
-        --query "[].{name:name,loginServer:loginServer,sku:sku.name}" \
-        -o table
+      docker build \
+        --build-arg SERVICE="$(testService)" \
+        -f scripts/deploy/services/Dockerfile \
+        -t "$(acrLoginServer)/pe-workflow/$(testService):$(Build.BuildId)" \
+        -t "$(acrLoginServer)/pe-workflow/$(testService):latest" \
+        .
+
+      echo
+      echo "Pushing Build ID tag..."
+
+      docker push \
+        "$(acrLoginServer)/pe-workflow/$(testService):$(Build.BuildId)"
+
+      echo
+      echo "Pushing latest tag..."
+
+      docker push \
+        "$(acrLoginServer)/pe-workflow/$(testService):latest"
+
+      echo
+      echo "Verifying ACR tags..."
+
+      az acr repository show-tags \
+        --name "$(acrName)" \
+        --repository "pe-workflow/$(testService)" \
+        --output table
