@@ -6,8 +6,7 @@ pool:
 
 variables:
   azureServiceConnection: pe-workflow-azure
-  resourceGroup: rg-pe-workflow-dev
-
+  resourceGroup: GWS-Engineering_and_Innovation-Sandbox
 steps:
 - checkout: self
 
