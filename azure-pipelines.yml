@@ -1,0 +1,20 @@
+# Starter pipeline
+
+trigger:
+- main
+
+pool:
+  vmImage: ubuntu-latest
+
+steps:
+- checkout: self
+
+- script: |
+    echo "Azure DevOps pipeline is running"
+    echo "Repository: $(Build.Repository.Name)"
+    echo "Branch: $(Build.SourceBranch)"
+    echo "Build ID: $(Build.BuildId)"
+    echo
+    echo "Repository contents:"
+    ls -la
+  displayName: 'Verify pipeline and GitHub checkout'
