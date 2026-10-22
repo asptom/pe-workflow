@@ -1,31 +1,54 @@
+# ================================================================
+# pe-workflow backend CI/CD (Azure DevOps)
+#
+# Lifecycle (immutable promotion):
+#
+#   source -> test -> build once -> push exact artifact -> ACR
+#          -> deploy same artifact -> private AKS
+#
+# Each lifecycle boundary is a separate scripts/deploy.sh action so the
+# image deployed to AKS is exactly the image produced by CI (same
+# Build.BuildId tag; no rebuild between ACR and AKS):
+#
+#   Test        go test ./internal/... + compile the six backend services
+#   BuildAndPush  deploy.sh --build --services, then --push --services
+#               (az acr login is done by the pipeline, not by deploy.sh)
+#   Deploy      deploy.sh --deploy --services (kubectl only, no docker)
+#
+# The pipeline is backend-only by design; the webapp is out of scope here
+# (it embeds generated static assets and is built/deployed separately via
+# scripts/deploy.sh --webapp).
+#
+# Kubernetes topology (namespace, ports, probes) is owned by
+# scripts/deploy/services/manifests.yaml and is deliberately not
+# duplicated in this file.
+# ================================================================
+
 trigger:
 - main
 
 variables:
   azureServiceConnection: pe-workflow-azure
   resourceGroup: GWS-Engineering_and_Innovation-Sandbox
-
+  aksName: aks-pe-workflow
   acrName: acrpeworkflowd211
   acrLoginServer: acrpeworkflowd211.azurecr.io
-
-  aksName: aks-pe-workflow
-  aksNamespace: pe-workflow
-
-  testService: eligibility
-  imageRepository: pe-workflow/eligibility
 
 stages:
 
 # ================================================================
-# Stage 1: Test, build, and push the container image
+# Stage 1: Test — Microsoft-hosted Ubuntu
+# Go tests for the shared packages plus an explicit compile of all six
+# backend services. Deliberately scoped to ./internal/... and the six
+# service binaries; backend CI must not pull in other cmd/ targets.
 # ================================================================
-- stage: Build
-  displayName: 'Build and push eligibility'
+- stage: Test
+  displayName: 'Test backend services'
 
   jobs:
 
-  - job: BuildEligibility
-    displayName: 'Build eligibility image'
+  - job: TestBackend
+    displayName: 'Go test and compile the six backend services'
 
     pool:
       vmImage: ubuntu-latest
@@ -41,7 +64,7 @@ stages:
         version: '1.22.0'
 
     - script: |
-        set -euo pipefail
+        set -Eeuo pipefail
 
         cd services
 
@@ -49,22 +72,55 @@ stages:
         go test ./internal/...
 
         echo
-        echo "Building eligibility service..."
-        go build ./cmd/eligibility
+        echo "Compiling the six backend services..."
 
-      displayName: 'Test Go packages and build eligibility'
+        for svc in \
+          eligibility \
+          verification \
+          scheduling \
+          documents \
+          notifications \
+          simulator
+        do
+          echo "  go build ./cmd/${svc}"
+          go build "./cmd/${svc}"
+        done
+
+      displayName: 'Test shared packages and compile backend services'
+
+# ================================================================
+# Stage 2: BuildAndPush — Microsoft-hosted Ubuntu
+# The pipeline authenticates Docker to ACR (az acr login); deploy.sh
+# only builds and then pushes. The immutable Build.BuildId tag is the
+# release identity: no 'latest' push and never --all-tags.
+# ================================================================
+- stage: BuildAndPush
+  displayName: 'Build and push backend images'
+
+  dependsOn: Test
+  condition: succeeded()
+
+  jobs:
+
+  - job: BuildAndPushImages
+    displayName: 'Build and push the six backend images'
+
+    pool:
+      vmImage: ubuntu-latest
+
+    steps:
+
+    - checkout: self
+      clean: true
 
     - task: AzureCLI@2
-      displayName: 'Build and push eligibility image'
+      displayName: 'Build and push backend images to ACR'
       inputs:
         azureSubscription: $(azureServiceConnection)
         scriptType: bash
         scriptLocation: inlineScript
         inlineScript: |
-          set -euo pipefail
-
-          BUILD_IMAGE="$(acrLoginServer)/$(imageRepository):$(Build.BuildId)"
-          LATEST_IMAGE="$(acrLoginServer)/$(imageRepository):latest"
+          set -Eeuo pipefail
 
           echo "Azure identity:"
           az account show \
@@ -78,53 +134,32 @@ stages:
             --name "$(acrName)"
 
           echo
-          echo "Building eligibility image..."
-          echo "Build image:  $BUILD_IMAGE"
-          echo "Latest image: $LATEST_IMAGE"
+          echo "Building the six backend images (tag: $(Build.BuildId))..."
 
-          docker build \
-            --build-arg SERVICE="$(testService)" \
-            -f scripts/deploy/services/Dockerfile \
-            -t "$BUILD_IMAGE" \
-            -t "$LATEST_IMAGE" \
-            .
+          REGISTRY="$(acrLoginServer)" TAG="$(Build.BuildId)" ./scripts/deploy.sh --build --services
 
           echo
-          echo "Pushing immutable Build ID tag..."
+          echo "Pushing the six backend images (tag: $(Build.BuildId))..."
 
-          docker push "$BUILD_IMAGE"
-
-          echo
-          echo "Pushing latest tag..."
-
-          docker push "$LATEST_IMAGE"
-
-          echo
-          echo "Verifying ACR tags..."
-
-          az acr repository show-tags \
-            --name "$(acrName)" \
-            --repository "$(imageRepository)" \
-            --output table
-
-          echo
-          echo "Successfully pushed:"
-          echo "$BUILD_IMAGE"
-
+          REGISTRY="$(acrLoginServer)" TAG="$(Build.BuildId)" ./scripts/deploy.sh --push --services
 
 # ================================================================
-# Stage 2: Deploy the immutable image to private AKS
+# Stage 3: Deploy — self-hosted vm-jumpbox (private AKS)
+# Deploys the exact images built in the previous stage (same
+# Build.BuildId tag). No docker build/push, no webapp, no hard-coded
+# ports, no duplicated namespace: deploy.sh resolves the namespace
+# from the canonical manifests / cluster.
 # ================================================================
 - stage: Deploy
-  displayName: 'Deploy eligibility to AKS'
+  displayName: 'Deploy backend images to AKS'
 
-  dependsOn: Build
+  dependsOn: BuildAndPush
   condition: succeeded()
 
   jobs:
 
-  - job: DeployEligibility
-    displayName: 'Deploy eligibility through vm-jumpbox'
+  - job: DeployBackend
+    displayName: 'Deploy backend images through vm-jumpbox'
 
     pool:
       name: Default
@@ -140,35 +175,19 @@ stages:
       clean: true
 
     - task: AzureCLI@2
-      displayName: 'Deploy eligibility to AKS'
+      displayName: 'Deploy backend images to private AKS'
       inputs:
         azureSubscription: $(azureServiceConnection)
         scriptType: bash
         scriptLocation: inlineScript
         inlineScript: |
-          set -euo pipefail
-
-          IMAGE="$(acrLoginServer)/$(imageRepository):$(Build.BuildId)"
+          set -Eeuo pipefail
 
           echo "Deployment configuration:"
           echo "  Resource group: $(resourceGroup)"
           echo "  AKS cluster:    $(aksName)"
-          echo "  Namespace:      $(aksNamespace)"
-          echo "  Deployment:     $(testService)"
-          echo "  Image:          $IMAGE"
-
-          echo
-          echo "Checking required command-line tools..."
-
-          command -v az
-          command -v kubectl
-
-          echo
-          echo "Azure identity used by the deployment stage:"
-
-          az account show \
-            --query "{subscription:name,tenantId:tenantId,user:user.name}" \
-            -o yaml
+          echo "  Registry:       $(acrLoginServer)"
+          echo "  Image tag:      $(Build.BuildId)"
 
           echo
           echo "Retrieving AKS credentials..."
@@ -179,78 +198,14 @@ stages:
             --overwrite-existing
 
           echo
-          echo "Displaying current Kubernetes context..."
-
-          kubectl config current-context
-
-          echo
           echo "Verifying connectivity to the private AKS cluster..."
 
           kubectl get nodes -o wide
 
           echo
-          echo "Creating the namespace if it does not already exist..."
+          echo "Applying the canonical backend manifests and waiting for rollouts..."
 
-          kubectl create namespace "$(aksNamespace)" \
-            --dry-run=client \
-            -o yaml |
-            kubectl apply -f -
+          REGISTRY="$(acrLoginServer)" TAG="$(Build.BuildId)" ./scripts/deploy.sh --deploy --services
 
           echo
-          echo "Applying the eligibility Kubernetes manifest..."
-
-          kubectl apply \
-            -f scripts/deploy/services/eligibility.yaml
-
-          echo
-          echo "Updating eligibility to the immutable Build ID image..."
-
-          kubectl set image \
-            deployment/$(testService) \
-            $(testService)="$IMAGE" \
-            --namespace "$(aksNamespace)"
-
-          echo
-          echo "Waiting for the eligibility rollout to complete..."
-
-          kubectl rollout status \
-            deployment/$(testService) \
-            --namespace "$(aksNamespace)" \
-            --timeout=180s
-
-          echo
-          echo "Deployment status:"
-
-          kubectl get deployment \
-            "$(testService)" \
-            --namespace "$(aksNamespace)" \
-            -o wide
-
-          echo
-          echo "Service status:"
-
-          kubectl get service \
-            "$(testService)" \
-            --namespace "$(aksNamespace)" \
-            -o wide
-
-          echo
-          echo "Eligibility pods:"
-
-          kubectl get pods \
-            --namespace "$(aksNamespace)" \
-            --selector app="$(testService)" \
-            -o wide
-
-          echo
-          echo "Image configured on the deployment:"
-
-          kubectl get deployment \
-            "$(testService)" \
-            --namespace "$(aksNamespace)" \
-            --output jsonpath='{.spec.template.spec.containers[0].image}'
-
-          echo
-          echo
-
           echo "AKS deployment completed successfully."

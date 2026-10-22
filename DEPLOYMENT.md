@@ -101,8 +101,13 @@ own temporary Keycloak and Zeebe gateway port-forwards and cleans them up when d
 ./scripts/deploy.sh --services
 ```
 
-Builds the six Go service images and applies `scripts/deploy/services/manifests.yaml`, then rolls
-out each deployment.
+Builds the six Go service images locally (`pe-workflow/<svc>:latest`; `REGISTRY` is ignored on
+this path) and applies the full canonical `scripts/deploy/services/manifests.yaml` (including
+`pe-webapp`), then rollout-restarts and waits for each deployment. `NAMESPACE` (default
+`camunda`), `MANIFEST`, and `ROLLOUT_TIMEOUT` (default `180s`) can be overridden.
+
+For the separated CI/CD lifecycle actions (`--build`/`--push`/`--deploy --services`), see
+[CI/CD lifecycle actions (Azure)](#cicd-lifecycle-actions-azure).
 
 ### Step 4 — Deploy workflow resources
 
@@ -190,10 +195,17 @@ The default Camunda user is `admin` (email `admin@camunda.local`).
 |------|--------|
 | `--platform` | Camunda platform only |
 | `--configure` | c8ctl profile/authorizations only |
-| `--services` | Build + deploy Go workers only |
+| `--services` | Build + deploy Go workers only (local images, ignores `REGISTRY`) |
+| `--build --services` | Build the six backend images only; `TAG` defaults to `latest`, `REGISTRY` optional |
+| `--push --services` | Push previously built images to `REGISTRY`; requires `REGISTRY` and `TAG`, never rebuilds |
+| `--deploy --services` | Point the backend manifests at `$REGISTRY/$IMAGE_PREFIX/<svc>:$TAG`, apply, and wait for rollouts; requires `REGISTRY` and `TAG`, never runs docker |
 | `--resources` | Deploy workflow artifacts only |
 | `--webapp` | Build + deploy Angular SPA/BFF only |
 | `--all` | Everything (default) |
+
+Value overrides (flag or environment variable): `--registry`/`REGISTRY`, `--tag`/`TAG`,
+`--namespace`/`NAMESPACE`, `--manifest`/`MANIFEST`, `--profile`/`PROFILE`, plus `IMAGE_PREFIX`
+(default `pe-workflow`) and `ROLLOUT_TIMEOUT` (default `180s`).
 
 Examples:
 
@@ -201,12 +213,49 @@ Examples:
 ./scripts/deploy.sh --resources          # re-deploy artifacts after a BPMN/DMN/form change
 ./scripts/deploy.sh --webapp             # rebuild and roll out the SPA after a UI change
 ./scripts/deploy.sh --platform --services
+
+# CI-style separated lifecycle (see the next section)
+REGISTRY=acrpeworkflowd211.azurecr.io TAG=27 ./scripts/deploy.sh --build --services
+REGISTRY=acrpeworkflowd211.azurecr.io TAG=27 ./scripts/deploy.sh --push --services
+REGISTRY=acrpeworkflowd211.azurecr.io TAG=27 ./scripts/deploy.sh --deploy --services
 ```
 
 You can also call the underlying scripts directly:
-`scripts/deploy/services/build-deploy.sh --services --resources` and
+`scripts/deploy/services/build-deploy.sh` — now a deprecated thin wrapper that forwards
+`--services`/`--resources`/`--tag`/`--profile` to `scripts/deploy.sh` — and
 `scripts/deploy/camunda/scripts/camunda-deploy-no-domain.sh` (which, unlike `deploy.sh`,
 configures c8ctl in its final step unless `--skip-c8ctl-config` is passed).
+
+---
+
+## CI/CD lifecycle actions (Azure)
+
+`azure-pipelines.yml` drives the six backend services through three separate lifecycle
+actions exposed by `deploy.sh`. The governing principle is **immutable promotion**: build
+once, publish once, deploy the same artifact. The image deployed to AKS is the image
+produced by CI — there is no rebuild between ACR and AKS.
+
+| Action | Pipeline invocation | What it does |
+|--------|---------------------|--------------|
+| Build | `REGISTRY=$(acrLoginServer) TAG=$(Build.BuildId) ./scripts/deploy.sh --build --services` | `docker build` (repo-root context, shared `scripts/deploy/services/Dockerfile`) the six images as `$REGISTRY/pe-workflow/<svc>:$TAG`. No push, no Kubernetes. |
+| Push | `REGISTRY=$(acrLoginServer) TAG=$(Build.BuildId) ./scripts/deploy.sh --push --services` | Verifies each local image exists, then `docker push`es exactly that tag. Never `--all-tags`, never `latest`, never a rebuild. |
+| Deploy | `REGISTRY=$(acrLoginServer) TAG=$(Build.BuildId) ./scripts/deploy.sh --deploy --services` | Filters `manifests.yaml` down to the six backend Deployments/Services, rewrites images to `$REGISTRY/pe-workflow/<svc>:$TAG`, `kubectl apply`, waits for each rollout, and reports the deployed state. Never runs docker. |
+
+Notes:
+
+- ACR login is performed by the pipeline (`az acr login`) — `deploy.sh` never
+  authenticates to a registry, and deploy never builds or pushes.
+- The same immutable `TAG` (`$(Build.BuildId)`) flows through build, push, and deploy;
+  `latest` is not used for deployment.
+- Kubernetes topology (namespace, ports, probes) is owned by
+  `scripts/deploy/services/manifests.yaml`; the pipeline does not duplicate it. The former
+  CI-experiment manifest `scripts/deploy/services/eligibility.yaml` (different name,
+  namespace, and port than the canonical manifests) has been removed.
+- `--deploy` namespace handling: with no `NAMESPACE` override the namespace is discovered
+  from the cluster (it must resolve unambiguously to one namespace); with an explicit
+  `NAMESPACE`/`--namespace` the manifest namespaces are rewritten to match and the
+  namespace is created if missing (a local troubleshooting override).
+- `ROLLOUT_TIMEOUT` (default `180s`) overrides the per-service rollout wait.
 
 ---
 

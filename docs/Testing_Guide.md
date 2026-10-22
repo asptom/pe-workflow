@@ -37,11 +37,11 @@ including the simulated review/decision pauses.
    and deploy the workflow resources in the verified order:
 
    ```bash
-   ./scripts/deploy/services/build-deploy.sh --services --resources
+   ./scripts/deploy.sh --services --resources
    ```
 
    This runs `docker build` per service, `kubectl apply -f scripts/deploy/services/manifests.yaml`,
-   `kubectl rollout status deployment/pe-<svc> -n camunda --timeout=120s`, then the four
+   `kubectl rollout status deployment/pe-<svc> -n camunda --timeout=180s`, then the four
    `c8ctl deploy` resource steps below.
 
 4. Confirm the workers are up:
@@ -72,7 +72,7 @@ c8ctl deploy workflows/855x-combined/delegates/ --profile=kubernetes
 c8ctl deploy workflows/855x-combined/Enrollment_Orchestrator.bpmn --profile=kubernetes
 ```
 
-Or just `./scripts/deploy/services/build-deploy.sh --resources`.
+Or just `./scripts/deploy.sh --resources`.
 
 ## 2. The simulator
 
