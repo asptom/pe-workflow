@@ -1,82 +1,256 @@
 trigger:
 - main
 
-pool:
-  vmImage: ubuntu-latest
-
 variables:
   azureServiceConnection: pe-workflow-azure
   resourceGroup: GWS-Engineering_and_Innovation-Sandbox
+
   acrName: acrpeworkflowd211
   acrLoginServer: acrpeworkflowd211.azurecr.io
+
+  aksName: aks-pe-workflow
+  aksNamespace: pe-workflow
+
   testService: eligibility
+  imageRepository: pe-workflow/eligibility
 
-steps:
-- checkout: self
+stages:
 
-- task: GoTool@0
-  displayName: 'Install Go 1.22'
-  inputs:
-    version: '1.22.0'
+# ================================================================
+# Stage 1: Test, build, and push the container image
+# ================================================================
+- stage: Build
+  displayName: 'Build and push eligibility'
 
-- script: |
-    set -euo pipefail
+  jobs:
 
-    cd services
+  - job: BuildEligibility
+    displayName: 'Build eligibility image'
 
-    echo "Running Go tests for shared packages..."
-    go test ./internal/...
+    pool:
+      vmImage: ubuntu-latest
 
-    echo
-    echo "Building eligibility service..."
-    go build ./cmd/eligibility
-  displayName: 'Test Go packages and build eligibility'
+    steps:
 
-- task: AzureCLI@2
-  displayName: 'Build and push eligibility image'
-  inputs:
-    azureSubscription: $(azureServiceConnection)
-    scriptType: bash
-    scriptLocation: inlineScript
-    inlineScript: |
-      set -euo pipefail
+    - checkout: self
+      clean: true
 
-      echo "Azure identity:"
-      az account show \
-        --query "{subscription:name,tenantId:tenantId}" \
-        -o table
+    - task: GoTool@0
+      displayName: 'Install Go 1.22'
+      inputs:
+        version: '1.22.0'
 
-      echo
-      echo "Authenticating Docker to ACR..."
-      az acr login \
-        --name "$(acrName)"
+    - script: |
+        set -euo pipefail
 
-      echo
-      echo "Building $(testService)..."
+        cd services
 
-      docker build \
-        --build-arg SERVICE="$(testService)" \
-        -f scripts/deploy/services/Dockerfile \
-        -t "$(acrLoginServer)/pe-workflow/$(testService):$(Build.BuildId)" \
-        -t "$(acrLoginServer)/pe-workflow/$(testService):latest" \
-        .
+        echo "Running Go tests for shared packages..."
+        go test ./internal/...
 
-      echo
-      echo "Pushing Build ID tag..."
+        echo
+        echo "Building eligibility service..."
+        go build ./cmd/eligibility
 
-      docker push \
-        "$(acrLoginServer)/pe-workflow/$(testService):$(Build.BuildId)"
+      displayName: 'Test Go packages and build eligibility'
 
-      echo
-      echo "Pushing latest tag..."
+    - task: AzureCLI@2
+      displayName: 'Build and push eligibility image'
+      inputs:
+        azureSubscription: $(azureServiceConnection)
+        scriptType: bash
+        scriptLocation: inlineScript
+        inlineScript: |
+          set -euo pipefail
 
-      docker push \
-        "$(acrLoginServer)/pe-workflow/$(testService):latest"
+          BUILD_IMAGE="$(acrLoginServer)/$(imageRepository):$(Build.BuildId)"
+          LATEST_IMAGE="$(acrLoginServer)/$(imageRepository):latest"
 
-      echo
-      echo "Verifying ACR tags..."
+          echo "Azure identity:"
+          az account show \
+            --query "{subscription:name,tenantId:tenantId}" \
+            -o table
 
-      az acr repository show-tags \
-        --name "$(acrName)" \
-        --repository "pe-workflow/$(testService)" \
-        --output table
+          echo
+          echo "Authenticating Docker to ACR..."
+
+          az acr login \
+            --name "$(acrName)"
+
+          echo
+          echo "Building eligibility image..."
+          echo "Build image:  $BUILD_IMAGE"
+          echo "Latest image: $LATEST_IMAGE"
+
+          docker build \
+            --build-arg SERVICE="$(testService)" \
+            -f scripts/deploy/services/Dockerfile \
+            -t "$BUILD_IMAGE" \
+            -t "$LATEST_IMAGE" \
+            .
+
+          echo
+          echo "Pushing immutable Build ID tag..."
+
+          docker push "$BUILD_IMAGE"
+
+          echo
+          echo "Pushing latest tag..."
+
+          docker push "$LATEST_IMAGE"
+
+          echo
+          echo "Verifying ACR tags..."
+
+          az acr repository show-tags \
+            --name "$(acrName)" \
+            --repository "$(imageRepository)" \
+            --output table
+
+          echo
+          echo "Successfully pushed:"
+          echo "$BUILD_IMAGE"
+
+
+# ================================================================
+# Stage 2: Deploy the immutable image to private AKS
+# ================================================================
+- stage: Deploy
+  displayName: 'Deploy eligibility to AKS'
+
+  dependsOn: Build
+  condition: succeeded()
+
+  jobs:
+
+  - job: DeployEligibility
+    displayName: 'Deploy eligibility through vm-jumpbox'
+
+    pool:
+      name: Default
+      demands:
+      - Agent.Name -equals vm-jumpbox
+
+    workspace:
+      clean: all
+
+    steps:
+
+    - checkout: self
+      clean: true
+
+    - task: AzureCLI@2
+      displayName: 'Deploy eligibility to AKS'
+      inputs:
+        azureSubscription: $(azureServiceConnection)
+        scriptType: bash
+        scriptLocation: inlineScript
+        inlineScript: |
+          set -euo pipefail
+
+          IMAGE="$(acrLoginServer)/$(imageRepository):$(Build.BuildId)"
+
+          echo "Deployment configuration:"
+          echo "  Resource group: $(resourceGroup)"
+          echo "  AKS cluster:    $(aksName)"
+          echo "  Namespace:      $(aksNamespace)"
+          echo "  Deployment:     $(testService)"
+          echo "  Image:          $IMAGE"
+
+          echo
+          echo "Checking required command-line tools..."
+
+          command -v az
+          command -v kubectl
+
+          echo
+          echo "Azure identity used by the deployment stage:"
+
+          az account show \
+            --query "{subscription:name,tenantId:tenantId,user:user.name}" \
+            -o yaml
+
+          echo
+          echo "Retrieving AKS credentials..."
+
+          az aks get-credentials \
+            --resource-group "$(resourceGroup)" \
+            --name "$(aksName)" \
+            --overwrite-existing
+
+          echo
+          echo "Displaying current Kubernetes context..."
+
+          kubectl config current-context
+
+          echo
+          echo "Verifying connectivity to the private AKS cluster..."
+
+          kubectl get nodes -o wide
+
+          echo
+          echo "Creating the namespace if it does not already exist..."
+
+          kubectl create namespace "$(aksNamespace)" \
+            --dry-run=client \
+            -o yaml |
+            kubectl apply -f -
+
+          echo
+          echo "Applying the eligibility Kubernetes manifest..."
+
+          kubectl apply \
+            -f scripts/deploy/services/eligibility.yaml
+
+          echo
+          echo "Updating eligibility to the immutable Build ID image..."
+
+          kubectl set image \
+            deployment/$(testService) \
+            $(testService)="$IMAGE" \
+            --namespace "$(aksNamespace)"
+
+          echo
+          echo "Waiting for the eligibility rollout to complete..."
+
+          kubectl rollout status \
+            deployment/$(testService) \
+            --namespace "$(aksNamespace)" \
+            --timeout=180s
+
+          echo
+          echo "Deployment status:"
+
+          kubectl get deployment \
+            "$(testService)" \
+            --namespace "$(aksNamespace)" \
+            -o wide
+
+          echo
+          echo "Service status:"
+
+          kubectl get service \
+            "$(testService)" \
+            --namespace "$(aksNamespace)" \
+            -o wide
+
+          echo
+          echo "Eligibility pods:"
+
+          kubectl get pods \
+            --namespace "$(aksNamespace)" \
+            --selector app="$(testService)" \
+            -o wide
+
+          echo
+          echo "Image configured on the deployment:"
+
+          kubectl get deployment \
+            "$(testService)" \
+            --namespace "$(aksNamespace)" \
+            --output jsonpath='{.spec.template.spec.containers[0].image}'
+
+          echo
+          echo
+
+          echo "AKS deployment completed successfully."
