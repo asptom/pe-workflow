@@ -478,8 +478,13 @@ step_deploy_services() {
         exit 1
       fi
     else
-      if ! ns_list="$(kubectl get deployment "pe-$svc" -A -o jsonpath='{range .items[*]}{.metadata.namespace}{"\n"}{end}' 2>/dev/null)"; then
-        echo "ERROR: kubectl failed while locating deployment pe-$svc; is the cluster reachable?" >&2
+      if ! ns_list="$(
+        kubectl get deployments \
+          --all-namespaces \
+          -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.metadata.namespace}{"\n"}{end}' |
+          awk -v deployment="pe-$svc" '$1 == deployment { print $2 }'
+      )"; then
+        echo "ERROR: kubectl failed while listing deployments across namespaces." >&2
         exit 1
       fi
       ns_list="$(printf '%s\n' "$ns_list" | sort -u)"
