@@ -1,0 +1,598 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>My Work · Enrollment Workbench</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='12' fill='%231B2A4A'/><path d='M32 13l4.6 11.7 12.4.7-9.7 7.9 3.3 12-10.6-6.8-10.6 6.8 3.3-12-9.7-7.9 12.4-.7z' fill='%23C9A855'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@500;600;700;800&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="index.html">
+      <svg class="seal" viewBox="0 0 40 40" aria-hidden="true">
+        <circle cx="20" cy="20" r="18.5" fill="none" stroke="#C9A855" stroke-width="1.4"/>
+        <circle cx="20" cy="20" r="14.5" fill="none" stroke="#C9A855" stroke-width=".7"/>
+        <path d="M20 10.5l2.6 6.6 7.1.4-5.6 4.5 1.9 6.9-6-3.9-6 3.9 1.9-6.9-5.6-4.5 7.1-.4z" fill="#C9A855"/>
+      </svg>
+      <span class="brand-text"><strong>Enrollment Workbench</strong><small>CMS · Medicare Provider Enrollment</small></span>
+    </a>
+    <nav class="topnav" aria-label="Primary">
+      <a class="active" href="dashboard.html">My Work</a>
+      <a href="index.html#mapping">Workflow Catalog</a>
+    </nav>
+    <div class="topbar-right">
+      <span class="clock mono">TUE · OCT 27 2026 · 09:41</span>
+      <span class="protochip">Design Prototype</span>
+      <button class="btn btn-primary btn-sm" id="startBtn">＋ Start application</button>
+      <span class="userchip">
+        <span class="avatar">MA</span>
+        <span><strong>M. Alvarez</strong><small>Enrollment Specialist · Jurisdiction JI</small></span>
+      </span>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- page head -->
+  <section class="pagehead anim">
+    <div>
+      <h1>Good morning, Maria.</h1>
+      <p class="pagehead-sub">Tuesday, October 27 · <strong id="headAttn">4 items need your action</strong> · 1 response window closes within 7 days · 2 cases at CMS</p>
+    </div>
+    <div class="pagehead-note">PECOS demo mode<br>timer days emulated per docs/Testing_Guide.md</div>
+  </section>
+
+  <!-- kpi strip -->
+  <section class="kpis anim" style="--d:1" aria-label="Work summary">
+    <div class="kpi">
+      <div class="kpi-label">Active applications</div>
+      <div class="kpi-value">10</div>
+      <div class="kpi-sub">+2 received this week</div>
+    </div>
+    <div class="kpi atten">
+      <div class="kpi-label"><span class="dot" style="background:var(--amber)"></span>Needs your attention</div>
+      <div class="kpi-value" id="kpiAttention">4</div>
+      <div class="kpi-sub">2 decisions · 1 response · 1 compliance</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label"><span class="dot" style="background:var(--federal)"></span>Awaiting SA/AO</div>
+      <div class="kpi-value">1</div>
+      <div class="kpi-sub">follow-up sent · escalation in 6d</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label"><span class="dot" style="background:var(--federal)"></span>At CMS review</div>
+      <div class="kpi-value">2</div>
+      <div class="kpi-sub">30-day review windows open</div>
+    </div>
+    <div class="kpi good">
+      <div class="kpi-label"><span class="dot" style="background:var(--green)"></span>Approved this month</div>
+      <div class="kpi-value">4</div>
+      <div class="kpi-sub">avg cycle 41 days · goal 60</div>
+    </div>
+  </section>
+
+  <!-- pipeline band -->
+  <section class="pipeline anim" style="--d:2" aria-label="Pipeline overview">
+    <div class="pipe-head">
+      <div>
+        <h2>Enrollment pipeline</h2>
+        <p>CMS Provider Enrollment Orchestrator · delegates 855I / 855A / 855B · 10 active applications</p>
+      </div>
+      <span class="legend">count = applications at stage</span>
+    </div>
+    <div class="pipe">
+      <div class="pipe-seg s1">
+        <span class="pipe-count">1</span>
+        <span class="pipe-name">Intake</span>
+        <span class="pipe-cap">Shared_Intake · tracking no.</span>
+      </div>
+      <div class="pipe-seg s2">
+        <span class="pipe-count">2</span>
+        <span class="pipe-name">Screening</span>
+        <span class="pipe-cap">OIG · SAM · NPI · TIN · license</span>
+      </div>
+      <div class="pipe-seg s1">
+        <span class="pipe-count">1</span>
+        <span class="pipe-name">Type verification</span>
+        <span class="pipe-cap">per-delegate checks</span>
+      </div>
+      <div class="pipe-seg hot s3">
+        <span class="pipe-count">2</span>
+        <span class="pipe-name">Review · Site visit</span>
+        <span class="pipe-cap">user tasks · 855A</span>
+      </div>
+      <div class="pipe-seg s1">
+        <span class="pipe-count">1</span>
+        <span class="pipe-name">SA/AO referral</span>
+        <span class="pipe-cap">45d review → follow-up</span>
+      </div>
+      <div class="pipe-seg s2">
+        <span class="pipe-count">1</span>
+        <span class="pipe-name">Eligibility · responses</span>
+        <span class="pipe-cap">DMN · 30d info window</span>
+      </div>
+      <div class="pipe-seg s2">
+        <span class="pipe-count">2</span>
+        <span class="pipe-name">CMS review</span>
+        <span class="pipe-cap">forward · 30d window</span>
+      </div>
+      <div class="pipe-seg done">
+        <span class="pipe-count">2</span>
+        <span class="pipe-name">Determined</span>
+        <span class="pipe-cap">this week · letters sent</span>
+      </div>
+    </div>
+  </section>
+
+  <div class="maingrid">
+
+    <!-- ============ attention queue ============ -->
+    <section class="anim" style="--d:3" aria-label="Needs attention">
+      <div class="sechead">
+        <h2>Needs your attention</h2>
+        <span class="mono">Priority order · <span id="attenCount">4</span> items</span>
+      </div>
+
+      <div class="attention-stack" id="attentionStack">
+
+        <article class="acard p1" id="card-review">
+          <div class="acard-top">
+            <span class="pchip">P1</span>
+            <span class="typebadge t855A">CMS-855A</span>
+            <span class="pill solid-amber" style="margin-left:auto">Decision required</span>
+          </div>
+          <h3><a href="case-review.html">Main Street Clinic</a></h3>
+          <p class="acard-why">Facility application review is waiting on your approval decision. All six automated screening checks cleared — the packet is complete.</p>
+          <div class="acard-meta">Review Facility Application · enrollment-reviewers · opened today 8:42 AM</div>
+          <div class="acard-foot">
+            <span class="duechip">Opened 1h ago · no SLA risk</span>
+            <a class="btn btn-primary btn-sm" href="case-review.html">Open case →</a>
+          </div>
+        </article>
+
+        <article class="acard p2" id="card-sitevisit">
+          <div class="acard-top">
+            <span class="pchip">P2</span>
+            <span class="typebadge t855A">CMS-855A</span>
+            <span class="pill amber" style="margin-left:auto">Report due</span>
+          </div>
+          <h3><a href="case-site-visit.html">Lakeview Surgical Center</a></h3>
+          <p class="acard-why">The site visit was conducted Oct 24 — the report hasn’t been filed. SA/AO returned a favorable recommendation; eligibility review follows your submission.</p>
+          <div class="acard-meta">Complete Site Visit Report · site-visitors · due Oct 31</div>
+          <div class="acard-foot">
+            <span class="duechip risk">Due in 4 days</span>
+            <a class="btn btn-primary btn-sm" href="case-site-visit.html">Open case →</a>
+          </div>
+        </article>
+
+        <article class="acard p3" id="card-response">
+          <div class="acard-top">
+            <span class="pchip">P3</span>
+            <span class="typebadge t855B">CMS-855B</span>
+            <span class="pill amber" style="margin-left:auto">Response received</span>
+          </div>
+          <h3><a href="case-response.html">Coastal DME Services</a></h3>
+          <p class="acard-why">Provider responded to the additional-information request inside the 30-day window. Verify the submission and release the case to CMS review.</p>
+          <div class="acard-meta">Verify additional information · eligibility CONDITIONAL · risk 75 · SA/AO: Favorable</div>
+          <div class="acard-foot">
+            <span class="duechip risk">Response window closes Oct 31 · 4 days</span>
+            <a class="btn btn-primary btn-sm" href="case-response.html">Open case →</a>
+          </div>
+        </article>
+
+        <article class="acard p4" id="card-fairfield">
+          <div class="acard-top">
+            <span class="pchip">P4</span>
+            <span class="typebadge t855B">CMS-855B</span>
+            <span class="pill red" style="margin-left:auto">Compliance</span>
+          </div>
+          <h3><a href="#" id="fairfieldOpen">Fairfield Home Medical</a></h3>
+          <p class="acard-why">OIG exclusion screening returned a confirmed LEIE match. The ineligibility notice is queued — confirm the determination before release.</p>
+          <div class="acard-meta">Eligibility_Rules → INELIGIBLE · oigCleared = false · notice kind: ineligibility</div>
+          <div class="acard-foot">
+            <span class="duechip calm">Notice queued · awaiting confirmation</span>
+            <button class="btn btn-ghost btn-sm" id="fairfieldOpenBtn">Review determination</button>
+          </div>
+        </article>
+
+        <!-- injected by demo loop after completing a task -->
+        <article class="acard resolved" id="card-resolved-slot" hidden>
+          <div class="acard-top">
+            <span class="pill green" style="margin-left:0">Completed</span>
+            <span class="mono" style="font-size:10px;color:var(--muted)" id="resolvedWhen">just now</span>
+          </div>
+          <p style="font-size:12.5px;color:var(--ink-2)" id="resolvedText">—</p>
+        </article>
+
+      </div>
+    </section>
+
+    <!-- ============ register + outcomes ============ -->
+    <div class="col-right">
+
+      <section class="anim" style="--d:4" aria-label="Assignment register">
+        <div class="sechead">
+          <h2>Assignment register</h2>
+          <span class="mono">All jurisdictions · 12 cases</span>
+        </div>
+        <div class="panel">
+          <table class="reg">
+            <thead>
+              <tr>
+                <th>Provider</th>
+                <th>Type</th>
+                <th>Stage</th>
+                <th>Status</th>
+                <th style="text-align:right">In&nbsp;proc.</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="regBody">
+              <tr class="link" data-open="case-review.html" id="row-mainstreet" title="Open case">
+                <td class="prov"><strong>Main Street Clinic</strong><small>NPI 1111111116</small></td>
+                <td><span class="typebadge t855A">855A</span></td>
+                <td><span class="dots" data-stage="4"><i class="done"></i><i class="done"></i><i class="done"></i><i class="cur"></i><i></i><i></i><i></i><i></i></span><span class="stagename">Facility review</span></td>
+                <td><span class="pill solid-amber">Decision req.</span></td>
+                <td class="age">6d</td>
+                <td class="chev">›</td>
+              </tr>
+              <tr class="link" data-open="case-site-visit.html" id="row-lakeview" title="Open case">
+                <td class="prov"><strong>Lakeview Surgical Center</strong><small>NPI 1555555556</small></td>
+                <td><span class="typebadge t855A">855A</span></td>
+                <td><span class="dots" data-stage="6"><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="cur"></i><i></i><i></i></span><span class="stagename">Site visit report</span></td>
+                <td><span class="pill amber">Report due</span></td>
+                <td class="age">27d</td>
+                <td class="chev">›</td>
+              </tr>
+              <tr class="link" data-open="case-response.html" id="row-coastal" title="Open case">
+                <td class="prov"><strong>Coastal DME Services</strong><small>NPI 1234567893</small></td>
+                <td><span class="typebadge t855B">855B</span></td>
+                <td><span class="dots" data-stage="6"><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="cur"></i><i></i><i></i></span><span class="stagename">Info response</span></td>
+                <td><span class="pill amber">Window open</span></td>
+                <td class="age">29d</td>
+                <td class="chev">›</td>
+              </tr>
+              <tr>
+                <td class="prov"><strong>Acme DME Supply</strong><small>NPI 1999999996</small></td>
+                <td><span class="typebadge t855B">855B</span></td>
+                <td><span class="dots" data-stage="5"><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="cur"></i><i></i><i></i><i></i></span><span class="stagename">SA/AO referral</span></td>
+                <td><span class="pill blue">Follow-up sent</span></td>
+                <td class="age">17d</td>
+                <td class="chev">·</td>
+              </tr>
+              <tr>
+                <td class="prov"><strong>Prairie Pain Institute</strong><small>NPI 1299888874</small></td>
+                <td><span class="typebadge t855I">855I</span></td>
+                <td><span class="dots" data-stage="7"><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="cur"></i><i></i></span><span class="stagename">CMS review</span></td>
+                <td><span class="pill blue">At CMS</span></td>
+                <td class="age">34d</td>
+                <td class="chev">·</td>
+              </tr>
+              <tr>
+                <td class="prov"><strong>Summit Imaging Partners</strong><small>NPI 1487766608</small></td>
+                <td><span class="typebadge t855A">855A</span></td>
+                <td><span class="dots" data-stage="7"><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="cur"></i><i></i></span><span class="stagename">CMS review</span></td>
+                <td><span class="pill blue">At CMS</span></td>
+                <td class="age">40d</td>
+                <td class="chev">·</td>
+              </tr>
+              <tr>
+                <td class="prov"><strong>Riverside Cardiology Associates</strong><small>NPI 1842222222</small></td>
+                <td><span class="typebadge t855I">855I</span></td>
+                <td><span class="dots" data-stage="2"><i class="done"></i><i class="cur"></i><i></i><i></i><i></i><i></i><i></i><i></i></span><span class="stagename">Screening</span></td>
+                <td><span class="pill blue">In flight</span></td>
+                <td class="age">4d</td>
+                <td class="chev">·</td>
+              </tr>
+              <tr>
+                <td class="prov"><strong>Cedar Grove Family Practice</strong><small>NPI 1508888888</small></td>
+                <td><span class="typebadge t855I">855I</span></td>
+                <td><span class="dots" data-stage="2"><i class="done"></i><i class="cur"></i><i></i><i></i><i></i><i></i><i></i><i></i></span><span class="stagename">Screening</span></td>
+                <td><span class="pill blue">In flight</span></td>
+                <td class="age">8d</td>
+                <td class="chev">·</td>
+              </tr>
+              <tr>
+                <td class="prov"><strong>Northgate Orthopedics</strong><small>NPI 1662222226</small></td>
+                <td><span class="typebadge t855I">855I</span></td>
+                <td><span class="dots" data-stage="3"><i class="done"></i><i class="done"></i><i class="cur"></i><i></i><i></i><i></i><i></i><i></i></span><span class="stagename">Board cert.</span></td>
+                <td><span class="pill blue">In flight</span></td>
+                <td class="age">12d</td>
+                <td class="chev">·</td>
+              </tr>
+              <tr>
+                <td class="prov"><strong>Bayside Rehabilitation Center</strong><small>NPI 1733333330</small></td>
+                <td><span class="typebadge t855A">855A</span></td>
+                <td><span class="dots" data-stage="1"><i class="cur"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span><span class="stagename">Intake</span></td>
+                <td><span class="pill gray">New today</span></td>
+                <td class="age">0d</td>
+                <td class="chev">·</td>
+              </tr>
+              <tr class="link" id="row-fairfield" title="Review determination">
+                <td class="prov"><strong>Fairfield Home Medical</strong><small>NPI 1809555555</small></td>
+                <td><span class="typebadge t855B">855B</span></td>
+                <td><span class="dots" data-stage="6"><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="bad"></i><i></i><i></i></span><span class="stagename">Ineligible</span></td>
+                <td><span class="pill red">Ineligible</span></td>
+                <td class="age">21d</td>
+                <td class="chev">›</td>
+              </tr>
+              <tr>
+                <td class="prov"><strong>Jane Doe MD, PC</strong><small>NPI 1234567890</small></td>
+                <td><span class="typebadge t855I">855I</span></td>
+                <td><span class="dots" data-stage="8"><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="ok"></i></span><span class="stagename">Enrolled</span></td>
+                <td><span class="pill green">Approved</span></td>
+                <td class="age">48d</td>
+                <td class="chev">·</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="anim" style="--d:5" aria-label="Recent outcomes">
+        <div class="sechead">
+          <h2>Recent outcomes</h2>
+          <span class="mono">Responses · decisions · notices</span>
+        </div>
+        <div class="panel">
+          <ul class="feed">
+            <li>
+              <span class="bdot green"></span>
+              <span class="t">OCT 27<br>9:12 AM</span>
+              <span class="b"><strong>CMS decision — Jane Doe MD, PC → Approved.</strong> Approval letter sent · CCN-1234567890 · PTAN-98765 · effective Sep 1.</span>
+            </li>
+            <li>
+              <span class="bdot blue"></span>
+              <span class="t">OCT 27<br>8:42 AM</span>
+              <span class="b"><strong>New user task — Main Street Clinic.</strong> Review Facility Application assigned to <span class="mono" style="font-size:10.5px">enrollment-reviewers</span>.</span>
+            </li>
+            <li>
+              <span class="bdot gold"></span>
+              <span class="t">OCT 26<br>2:18 PM</span>
+              <span class="b"><strong>SA/AO response — Coastal DME Services.</strong> Referral outcome: <strong>Favorable</strong> · received within 45-day window.</span>
+            </li>
+            <li>
+              <span class="bdot amber"></span>
+              <span class="t">OCT 24<br>11:05 AM</span>
+              <span class="b"><strong>Additional information received — Coastal DME Services.</strong> Response to conditional request · window closes Oct 31.</span>
+            </li>
+            <li>
+              <span class="bdot green"></span>
+              <span class="t">OCT 24<br>8:30 AM</span>
+              <span class="b"><strong>Site visit conducted — Lakeview Surgical Center.</strong> Inspector on site · report due Oct 31.</span>
+            </li>
+            <li>
+              <span class="bdot red"></span>
+              <span class="t">OCT 23<br>4:47 PM</span>
+              <span class="b"><strong>OIG match confirmed — Fairfield Home Medical.</strong> LEIE match verified by compliance · ineligibility notice queued.</span>
+            </li>
+          </ul>
+        </div>
+      </section>
+
+    </div>
+  </div>
+
+  <footer class="protofoot">
+    <span>Enrollment Workbench · design prototype v0.1 — simulated data derived from docs/Testing_Guide.md scenarios</span>
+    <span>Not connected to the Camunda cluster in this phase · phase 2 ports this design onto the existing BFF API</span>
+  </footer>
+</main>
+
+<!-- toast -->
+<div class="toast" id="toast" hidden role="status">
+  <span class="tick">✓</span>
+  <div><strong id="toastTitle">Done</strong><span id="toastSub"></span></div>
+</div>
+
+<!-- modal: ineligibility determination -->
+<div class="modal-backdrop" id="fairfieldModal" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="fmTitle">
+    <div class="modal-head">
+      <div>
+        <h3 id="fmTitle">Ineligibility determination — Fairfield Home Medical</h3>
+        <p>Enrollment Orchestrator · CMS-855B · NPI 1809555555 · MAC-1809555555-1791388800</p>
+      </div>
+      <button class="modal-x" data-close aria-label="Close">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="notice">
+        <div class="nh">Automated determination</div>
+        Eligibility_Rules evaluated <span class="mono" style="font-size:11px">oigCleared = false</span> → <strong>INELIGIBLE</strong>. The workflow has queued the notice — releasing it ends the case (Task_SendIneligibility · kind <span class="mono" style="font-size:11px">ineligibility</span>).
+      </div>
+      <dl class="kv">
+        <dt>Match source</dt><dd>LEIE — OIG List of Excluded Individuals/Entities</dd>
+        <dt>Match record</dt><dd class="mono" style="font-size:11.5px">LEIE #1993-21044 · name + DOB match · confidence 0.97</dd>
+        <dt>Verified by</dt><dd>Compliance screening desk · Oct 23, 4:47 PM</dd>
+        <dt>Provider notified</dt><dd>No — notice pending your confirmation</dd>
+        <dt>Re-enrollment</dt><dd>Statutory exclusion period applies · earliest reinstatement Jul 2029</dd>
+      </dl>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" data-close>Escalate to regional compliance</button>
+      <button class="btn btn-primary" id="releaseNotice">Confirm &amp; release notice</button>
+    </div>
+  </div>
+</div>
+
+<!-- modal: start application (intake) -->
+<div class="modal-backdrop" id="startModal" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="smTitle">
+    <div class="modal-head">
+      <div>
+        <h3 id="smTitle">Start enrollment application</h3>
+        <p>CMS Provider Enrollment Orchestrator · start form <span class="mono" style="font-size:11px">enrollment-start</span></p>
+      </div>
+      <button class="modal-x" data-close aria-label="Close">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label for="fType">Enrollment type</label>
+        <select class="select" id="fType">
+          <option value="855I">855I — Individual Practitioner</option>
+          <option value="855A" selected>855A — Organization / Facility</option>
+          <option value="855B">855B — DMEPOS Supplier</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="fName">Legal business name</label>
+        <input class="input" id="fName" placeholder="e.g. Meridian Women’s Health" value="">
+      </div>
+      <div class="field" style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div>
+          <label for="fNpi">NPI</label>
+          <input class="input mono" id="fNpi" placeholder="10 digits" maxlength="10" value="">
+        </div>
+        <div>
+          <label for="fTin">TIN</label>
+          <input class="input mono" id="fTin" placeholder="XX-XXXXXXX" value="">
+        </div>
+      </div>
+      <div class="field" style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div>
+          <label for="fMethod">Submission method</label>
+          <select class="select" id="fMethod"><option>PECOS</option><option>Paper</option></select>
+        </div>
+        <div>
+          <label for="fDate">Filing date</label>
+          <input class="input mono" id="fDate" type="date" value="2026-10-27">
+        </div>
+      </div>
+      <p class="hint" style="font-size:11px;color:var(--faint)">Submitting creates the process instance, assigns the MAC tracking number (Shared_Intake), and routes the case by enrollment type (Gateway_EnrollmentType).</p>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" data-close>Cancel</button>
+      <button class="btn btn-primary" id="startSubmit">Submit application</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  /* ---------- toast ---------- */
+  var toastEl=document.getElementById('toast'),tT=document.getElementById('toastTitle'),tS=document.getElementById('toastSub'),tTimer;
+  function toast(title,sub){
+    tT.textContent=title;tS.textContent=sub;toastEl.hidden=false;
+    clearTimeout(tTimer);tTimer=setTimeout(function(){toastEl.hidden=true},6500);
+  }
+
+  /* ---------- demo loop: ?resolved=review|sitevisit|response ---------- */
+  var params=new URLSearchParams(location.search);
+  var resolved=params.get('resolved');
+  var RES={
+    review:{card:'card-review',row:'row-mainstreet',
+      title:'Decision recorded — Main Street Clinic',
+      sub:'Application advanced to Verify Facility License (verify-license) → Check Fire Safety Compliance. Site visit task will follow SA/AO referral.',
+      feed:'Main Street Clinic — approval decision recorded. Automated verifications running; SA/AO referral next.'},
+    sitevisit:{card:'card-sitevisit',row:'row-lakeview',
+      title:'Site visit report submitted — Lakeview Surgical Center',
+      sub:'siteVisitOutcome = Passed · fireSafetyCompliant = true. Case returned to the SA/AO merge for eligibility review.',
+      feed:'Lakeview Surgical Center — site visit report filed (Passed). Eligibility determination pending.'},
+    response:{card:'card-response',row:'row-coastal',
+      title:'Response verified — Coastal DME Services released to CMS',
+      sub:'Forward complete application to CMS Provider Enrollment (kind cms-forward) · 30-day review window started.',
+      feed:'Coastal DME Services — response verified, released to CMS. 30-day decision window open.'}
+  };
+  if(resolved&&RES[resolved]){
+    var cfg=RES[resolved];
+    var card=document.getElementById(cfg.card);
+    if(card){
+      card.classList.add('resolved');
+      var foot=card.querySelector('.acard-foot');if(foot)foot.hidden=true;
+      var why=card.querySelector('.acard-why');if(why)why.hidden=true;
+      var pill=card.querySelector('.acard-top .pill');
+      if(pill){pill.className='pill green';pill.textContent='Completed today';}
+      card.querySelector('h3 a').addEventListener('click',function(e){e.preventDefault()});
+    }
+    // row update
+    var row=document.getElementById(cfg.row);
+    if(row){
+      var dots=row.querySelector('.dots').children;
+      var cur=row.querySelector('.dots .cur');
+      if(cur){cur.className='done';if(dots[[].indexOf.call(dots,cur)+1])dots[[].indexOf.call(dots,cur)+1].className='cur';}
+      var p=row.querySelector('.pill');
+      if(p){p.className='pill blue';p.textContent=resolved==='response'?'At CMS':'In flight';}
+      var sn=row.querySelector('.stagename');
+      if(sn)sn.textContent=resolved==='response'?'CMS review':(resolved==='review'?'Auto verifications':'Eligibility');
+    }
+    // resolved slot card
+    var slot=document.getElementById('card-resolved-slot');
+    slot.hidden=false;
+    document.getElementById('resolvedText').textContent=cfg.feed;
+    // kpi
+    var k=document.getElementById('kpiAttention');
+    k.textContent=Math.max(0,parseInt(k.textContent,10)-1);
+    document.getElementById('attenCount').textContent=parseInt(document.getElementById('attenCount').textContent,10)-1;
+    document.getElementById('headAttn').textContent=document.getElementById('attenCount').textContent+' items need your action';
+    var subs={review:'1 decision · 1 response · 1 compliance',sitevisit:'1 decision · 1 response · 1 compliance',response:'2 decisions · 1 compliance'};
+    var ksub=document.querySelector('#kpiAttention').parentElement.querySelector('.kpi-sub');
+    if(ksub&&subs[resolved])ksub.textContent=subs[resolved];
+    setTimeout(function(){toast(cfg.title,cfg.sub)},600);
+  }
+
+  /* ---------- register navigation ---------- */
+  document.querySelectorAll('#regBody tr.link[data-open]').forEach(function(tr){
+    tr.addEventListener('click',function(){location.href=tr.dataset.open});
+  });
+  document.getElementById('row-fairfield').addEventListener('click',function(){openModal(fairfieldModal)});
+
+  /* ---------- modals ---------- */
+  var fairfieldModal=document.getElementById('fairfieldModal');
+  var startModal=document.getElementById('startModal');
+  function openModal(m){m.hidden=false}
+  function closeModal(m){m.hidden=true}
+  document.getElementById('fairfieldOpen').addEventListener('click',function(e){e.preventDefault();openModal(fairfieldModal)});
+  document.getElementById('fairfieldOpenBtn').addEventListener('click',function(){openModal(fairfieldModal)});
+  document.querySelectorAll('.modal-backdrop').forEach(function(b){
+    b.addEventListener('click',function(e){if(e.target===b)b.hidden=true});
+    b.querySelectorAll('[data-close]').forEach(function(x){x.addEventListener('click',function(){b.hidden=true})});
+  });
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')document.querySelectorAll('.modal-backdrop').forEach(function(m){m.hidden=true})});
+  document.getElementById('releaseNotice').addEventListener('click',function(){
+    fairfieldModal.hidden=true;
+    var card=document.getElementById('card-fairfield'),row=document.getElementById('row-fairfield');
+    card.classList.add('resolved');
+    var foot=card.querySelector('.acard-foot');if(foot)foot.hidden=true;
+    var why=card.querySelector('.acard-why');if(why)why.hidden=true;
+    var pill=card.querySelector('.acard-top .pill');if(pill){pill.className='pill green';pill.textContent='Notice released';}
+    var k=document.getElementById('kpiAttention');
+    k.textContent=Math.max(0,parseInt(k.textContent,10)-1);
+    var ac=document.getElementById('attenCount');
+    ac.textContent=Math.max(0,parseInt(ac.textContent,10)-1);
+    document.getElementById('headAttn').textContent=document.getElementById('attenCount').textContent+' items need your action';
+    var ksub=document.querySelector('#kpiAttention').parentElement.querySelector('.kpi-sub');
+    if(ksub)ksub.textContent='2 decisions · 1 response';
+    setTimeout(function(){toast('Ineligibility notice released — Fairfield Home Medical','send-notification · kind ineligibility → EndEvent_Ineligible. Provider notified in writing.')},300);
+  });
+
+  /* ---------- start application ---------- */
+  document.getElementById('startBtn').addEventListener('click',function(){openModal(startModal)});
+  document.getElementById('startSubmit').addEventListener('click',function(){
+    var name=document.getElementById('fName').value.trim()||'New Provider';
+    var type=document.getElementById('fType').value;
+    var npi=document.getElementById('fNpi').value.trim()||'0000000000';
+    startModal.hidden=true;
+    var tbody=document.getElementById('regBody');
+    var tr=document.createElement('tr');
+    tr.className='link';tr.setAttribute('data-new','1');
+    tr.innerHTML=
+      '<td class="prov"><strong>'+name+'</strong><small>NPI '+npi+'</small></td>'+
+      '<td><span class="typebadge t'+type+'">'+type+'</span></td>'+
+      '<td><span class="dots"><i class="cur"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span><span class="stagename">Intake</span></td>'+
+      '<td><span class="pill gray">New today</span></td>'+
+      '<td class="age">0d</td><td class="chev">·</td>';
+    tbody.insertBefore(tr,tbody.firstChild);
+    tr.addEventListener('click',function(){toast('Case opened — '+name,'Shared_Intake assigned tracking MAC-'+npi+'-1793060000 · routing by Gateway_EnrollmentType to Delegate_'+type+'.')});
+    setTimeout(function(){toast('Application received — '+name,'Process instance started · Shared_Intake assigned tracking number · routed to Delegate_'+type+'.')},250);
+  });
+})();
+</script>
+</body>
+</html>

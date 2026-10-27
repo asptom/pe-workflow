@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Coastal DME Services · Verify Additional Information · Enrollment Workbench</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='12' fill='%231B2A4A'/><path d='M32 13l4.6 11.7 12.4.7-9.7 7.9 3.3 12-10.6-6.8-10.6 6.8 3.3-12-9.7-7.9 12.4-.7z' fill='%23C9A855'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@500;600;700;800&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="index.html">
+      <svg class="seal" viewBox="0 0 40 40" aria-hidden="true">
+        <circle cx="20" cy="20" r="18.5" fill="none" stroke="#C9A855" stroke-width="1.4"/>
+        <circle cx="20" cy="20" r="14.5" fill="none" stroke="#C9A855" stroke-width=".7"/>
+        <path d="M20 10.5l2.6 6.6 7.1.4-5.6 4.5 1.9 6.9-6-3.9-6 3.9 1.9-6.9-5.6-4.5 7.1-.4z" fill="#C9A855"/>
+      </svg>
+      <span class="brand-text"><strong>Enrollment Workbench</strong><small>CMS · Medicare Provider Enrollment</small></span>
+    </a>
+    <nav class="topnav" aria-label="Primary">
+      <a href="dashboard.html">My Work</a>
+      <a href="index.html#mapping">Workflow Catalog</a>
+    </nav>
+    <div class="topbar-right">
+      <span class="clock mono">TUE · OCT 27 2026 · 09:41</span>
+      <span class="protochip">Design Prototype</span>
+      <span class="userchip">
+        <span class="avatar">MA</span>
+        <span><strong>M. Alvarez</strong><small>Enrollment Specialist · Jurisdiction JI</small></span>
+      </span>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <a class="backlink anim" href="dashboard.html">← Back to my work</a>
+
+  <!-- case head -->
+  <section class="casehead anim">
+    <div>
+      <div class="chiprow">
+        <span class="typebadge t855B">CMS-855B</span>
+        <span class="chip">Initial Enrollment</span>
+        <span class="chip">DMEPOS Supplier</span>
+        <span class="chip info">Submitted via PECOS</span>
+        <span class="chip warn">Conditional enrollment path</span>
+      </div>
+      <h1>Coastal DME Services</h1>
+      <div class="idline">Tracking <b>MAC-1234567893-1790553600</b> &nbsp;·&nbsp; NPI <b>1234567893</b> &nbsp;·&nbsp; TIN <b>38-2904471</b> &nbsp;·&nbsp; Noridian Healthcare Solutions · Jurisdiction JI (IL · MN · WI)</div>
+    </div>
+    <div class="casehead-right">
+      <span class="stamp">Response window open</span>
+      <span class="chip warn">Response received Oct 24 · window closes Oct 31</span>
+    </div>
+  </section>
+
+  <!-- case facts strip -->
+  <section class="kpis anim" style="--d:1;margin-top:18px" aria-label="Case facts">
+    <div class="kpi">
+      <div class="kpi-label">Filing date</div>
+      <div class="kpi-value" style="font-size:20px;font-family:var(--f-mono)">SEP 28</div>
+      <div class="kpi-sub">received 8:55 AM · PECOS</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Days in process</div>
+      <div class="kpi-value">29</div>
+      <div class="kpi-sub">of est. 135-day timeline</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Eligibility (DMN)</div>
+      <div class="kpi-value" style="color:var(--amber)">Conditional</div>
+      <div class="kpi-sub">risk ≥ 75 → additional info + site visit</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label"><span class="dot" style="background:var(--amber)"></span>Risk score</div>
+      <div class="kpi-value" style="color:var(--amber)">75<small>/ 100 · elevated</small></div>
+      <div class="riskbar risk-high"><i></i></div>
+    </div>
+    <div class="kpi good">
+      <div class="kpi-label"><span class="dot" style="background:var(--green)"></span>SA/AO outcome</div>
+      <div class="kpi-value" style="color:var(--green)">Favorable</div>
+      <div class="kpi-sub">responded Oct 14 · inside 45-day window</div>
+    </div>
+  </section>
+
+  <div class="casegrid">
+
+    <!-- ============ dossier ============ -->
+    <div class="casecol anim" style="--d:2">
+      <section class="panel dossier">
+        <div class="panel-pad">
+          <h3 class="ptitle">Provider dossier</h3>
+          <dl>
+            <dt>Legal name</dt><dd>Coastal DME Services LLC</dd>
+            <dt>NPI</dt><dd class="mono">1234567893</dd>
+            <dt>TIN</dt><dd class="mono">38-2904471</dd>
+            <dt>Entity type</dt><dd>DME Supplier</dd>
+            <dt>State license</dt><dd class="mono">SL-77</dd>
+            <dt>Surety bond</dt><dd class="mono">$100,000 · effective</dd>
+            <dt>Equipment lic.</dt><dd class="mono">EQ-01</dd>
+            <dt>Practice state</dt><dd><span class="chip bad" style="font-size:9.5px">missing at filing</span> → <span class="chip ok" style="font-size:9.5px">FL · supplied Oct 24</span></dd>
+            <dt>Filing date</dt><dd class="mono">2026-09-28</dd>
+          </dl>
+        </div>
+      </section>
+
+      <section class="panel dossier">
+        <div class="panel-pad">
+          <h3 class="ptitle">Required documentation</h3>
+          <span style="font-size:10.5px;color:var(--faint);display:block;margin:-8px 0 11px">Per Enrollment_Documentation decision · 855B + Initial Enrollment</span>
+          <ul class="doclist">
+            <li class="rec">CMS-855B application <span class="st">RECEIVED</span></li>
+            <li class="rec">CMS-588 EFT form <span class="st">RECEIVED</span></li>
+            <li class="rec">State DME licensure <span class="st">VERIFIED</span></li>
+            <li class="rec">Surety bond <span class="st">VERIFIED</span></li>
+            <li class="rec">IRS CP575 letter <span class="st">RECEIVED</span></li>
+            <li class="rec">Voided check <span class="st">RECEIVED</span></li>
+            <li class="rec">EFT authorization <span class="st">RECEIVED</span></li>
+            <li class="flag">Practice location details <span class="st">SUPPLIED OCT 24</span></li>
+          </ul>
+        </div>
+      </section>
+    </div>
+
+    <!-- ============ journey ============ -->
+    <section class="panel anim" style="--d:3;align-self:start">
+      <div class="pipe-head">
+        <div>
+          <h2>Case journey</h2>
+          <p>Enrollment Orchestrator · conditional path · Gateway_Eligibility → additional info</p>
+        </div>
+        <span class="legend">Live position</span>
+      </div>
+      <div class="panel-pad journey" style="padding-top:16px">
+
+        <div class="jnode done">
+          <span class="jdot">✓</span>
+          <h4>Application received <span class="chip" style="font-size:9.5px">start form · enrollment-start</span></h4>
+          <div class="jt">SEP 28 · 8:55 AM</div>
+          <p class="jsub">Submitted via PECOS · filing date Sep 28.</p>
+        </div>
+
+        <div class="jnode done">
+          <span class="jdot">✓</span>
+          <h4>Shared Intake <span class="jobtag">Shared_Intake</span></h4>
+          <div class="jt">SEP 28 · 8:55 AM</div>
+          <p class="jsub">Tracking number assigned <span class="mono" style="font-size:11px">MAC-1234567893-1790553600</span>.</p>
+        </div>
+
+        <div class="jnode done">
+          <span class="jdot">✓</span>
+          <h4>Screening &amp; verification <span class="jobtag">Shared_OIG_Screening</span></h4>
+          <div class="jt">SEP 28 · 8:57 AM</div>
+          <div class="chiprow" style="margin-top:7px">
+            <span class="chip ok">✓ OIG cleared</span>
+            <span class="chip ok">✓ SAM cleared</span>
+            <span class="chip ok">✓ NPI active</span>
+            <span class="chip ok">✓ TIN match</span>
+            <span class="chip ok">✓ License valid</span>
+          </div>
+        </div>
+
+        <div class="jnode done">
+          <span class="jdot">✓</span>
+          <h4>Type verification <span class="jobtag">Delegate_855B</span></h4>
+          <div class="jt">SEP 29 · COMPLETE</div>
+          <div class="chiprow" style="margin-top:7px">
+            <span class="chip ok">✓ State licensure SL-77</span>
+            <span class="chip ok">✓ Surety bond $100,000</span>
+            <span class="chip ok">✓ Equipment licensure EQ-01</span>
+          </div>
+        </div>
+
+        <div class="jnode done">
+          <span class="jdot">✓</span>
+          <h4>SA/AO referral <span class="jobtag">Shared_SA_Referral</span></h4>
+          <div class="jt">REFERRED SEP 29 · RESPONDED OCT 14</div>
+          <p class="jsub">Response received inside the 45-day window — outcome <strong>Favorable</strong> <span class="mono" style="font-size:11px">(referral.saAoOutcome)</span>. No follow-up or escalation needed.</p>
+        </div>
+
+        <div class="jnode divert">
+          <span class="jdot">!</span>
+          <h4>Eligibility check <span class="jobtag">Eligibility_Rules · DMN</span></h4>
+          <div class="jt">OCT 1 · CONDITIONAL</div>
+          <div class="callout">
+            <strong>Risk score 75</strong> — elevated because no practice-location state was supplied at filing (base 30 + odd NPI digit 25 + missing state 20). Decision: <strong>CONDITIONAL</strong> → request additional information · 30-day response window · site visit required.
+          </div>
+          <p class="jsub" style="margin-top:9px">Additional information requested Oct 1 <span class="mono" style="font-size:11px">(kind: additional-info)</span> · <strong>provider responded Oct 24</strong> · window closes Oct 31.</p>
+        </div>
+
+        <div class="jnode active">
+          <span class="jdot">●</span>
+          <span class="flagtab">On you</span>
+          <h4>Verify additional information response</h4>
+          <div class="jt">RESPONSE RECEIVED OCT 24 · WINDOW CLOSES OCT 31</div>
+          <p class="jsub">Confirm the provider’s submission satisfies the conditional request, then release the case to CMS review.</p>
+        </div>
+
+        <div class="jnode pending">
+          <span class="jdot">7</span>
+          <h4>Calculate timeline &amp; forward to CMS <span class="jobtag">Processing_Timeline → cms-forward</span></h4>
+          <div class="jt">PENDING · 30-DAY CMS REVIEW</div>
+        </div>
+
+        <div class="jnode pending">
+          <span class="jdot">8</span>
+          <h4>CMS decision &amp; letters <span class="jobtag">simulate-cms-decision</span></h4>
+          <div class="jt">PENDING</div>
+          <p class="jsub">Approval (CCN + PTAN + effective date) or denial letter to provider.</p>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ============ action panel ============ -->
+    <div class="casecol casecol-action anim" style="--d:4">
+      <section class="actionpanel">
+        <div class="ap-head">
+          <div class="ap-kicker">Action required · verify response</div>
+          <h3>Verify additional information</h3>
+          <div class="ap-meta">response received OCT 24 · window closes OCT 31 (4 days)</div>
+        </div>
+        <div class="ap-body">
+
+          <div class="ap-section">
+            <h5>What was requested <span>Oct 1 · kind: additional-info</span></h5>
+            <ul class="doclist" style="margin-bottom:2px">
+              <li class="flag">Practice-location state &amp; address <span class="st">MISSING AT FILING</span></li>
+              <li class="flag">Updated CMS-855B · Sections 2 &amp; 6 <span class="st">REQUESTED</span></li>
+            </ul>
+          </div>
+
+          <div class="ap-section">
+            <h5>Provider response <span>received Oct 24 · 7 days early</span></h5>
+            <div class="docrow" style="margin-bottom:8px">
+              <span class="fico">PDF</span>
+              <div><div class="fn">CMS-855B · updated pages 3–4 &amp; Section 6</div><div class="fm">RESP-1234567893-1792412000 · 6 pages · uploaded via PECOS</div></div>
+              <a class="open" href="#" onclick="return false">View</a>
+            </div>
+            <p class="note" style="font-size:11.5px;color:var(--muted);line-height:1.55">Provider states practice location is <strong style="color:var(--ink)">Jacksonville, FL</strong>, consistent with the NPPES practice address. Surety bond rider unchanged ($100,000, FL-eligible).</p>
+          </div>
+
+          <div class="ap-section">
+            <h5>Verify each item <span>required</span></h5>
+            <div class="validate" id="checks">
+              <label class="check-row"><input type="checkbox" class="respcheck"><span style="font-size:12.5px">Practice-location state supplied (<strong style="font-size:12px">FL</strong>) and matches NPPES record</span></label>
+              <label class="check-row"><input type="checkbox" class="respcheck"><span style="font-size:12.5px">Updated CMS-855B pages complete &amp; signed</span></label>
+              <label class="check-row"><input type="checkbox" class="respcheck"><span style="font-size:12.5px">Address consistent with surety bond rider &amp; state license SL-77</span></label>
+            </div>
+            <div class="field" style="margin-top:13px">
+              <label for="vnotes">Verification notes</label>
+              <textarea class="textarea" id="vnotes" placeholder="Retained in the case record for audit"></textarea>
+            </div>
+          </div>
+
+        </div>
+        <div class="ap-foot">
+          <span class="note"><b>On release:</b> Calculate Processing Timeline (Processing_Timeline DMN · 135 days) → Forward to CMS Provider Enrollment <span class="mono" style="font-size:10px">(kind: cms-forward)</span> → 30-day CMS review window.</span>
+          <div class="btnrow">
+            <button class="btn btn-danger-ghost" onclick="location.href='dashboard.html'">Return to provider</button>
+            <button class="btn btn-primary btn-lg" id="releaseBtn" disabled>Release to CMS review</button>
+          </div>
+        </div>
+      </section>
+    </div>
+
+  </div>
+
+  <footer class="protofoot">
+    <span>Case view · Enrollment Orchestrator conditional path · “Request additional information” + 30-day response window (Timer_AdditionalInfo)</span>
+    <span>Design prototype · simulated data from docs/Testing_Guide.md scenario 5</span>
+  </footer>
+</main>
+
+<script>
+(function(){
+  var checks=document.querySelectorAll('.respcheck');
+  var btn=document.getElementById('releaseBtn');
+  function refresh(){
+    var all=Array.prototype.every.call(checks,function(c){return c.checked});
+    checks.forEach(function(c){c.closest('.check-row').classList.toggle('sel',c.checked)});
+    btn.disabled=!all;
+  }
+  checks.forEach(function(c){c.addEventListener('change',refresh)});
+  btn.addEventListener('click',function(){
+    location.href='dashboard.html?resolved=response';
+  });
+})();
+</script>
+</body>
+</html>
